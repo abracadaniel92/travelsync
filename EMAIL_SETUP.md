@@ -128,3 +128,4 @@ Check for new emails and process them (requires authentication)
 - App Passwords can be revoked from Google Account settings
 - Consider using environment variables or a secrets manager in production
 
+
