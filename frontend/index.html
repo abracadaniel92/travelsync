@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documents to Calendar</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=3">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Documents to Calendar</h1>
+            <button id="logoutBtn" class="btn btn-secondary">Sign out</button>
+        </header>
+        
+        <main>
+            <section class="upload-section">
+                <h2>Upload Document</h2>
+                <p class="description">Upload a ticket, boarding pass, or hotel reservation to extract travel information and add it to your calendar.</p>
+                
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" id="fileInput" accept="image/*,application/pdf" style="display: none;">
+                    <div class="upload-content">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p>Drag and drop your document here</p>
+                        <p class="file-types">or click to browse • JPG, PNG, PDF</p>
+                    </div>
+                </div>
+                
+                <div id="fileInfo" class="file-info" style="display: none;">
+                    <span id="fileName"></span>
+                    <button id="removeFile" class="btn btn-small">Remove</button>
+                </div>
+                
+                <button id="uploadBtn" type="button" class="btn btn-primary" style="display: none; margin-top: 1.5rem;">
+                    Process Document
+                </button>
+                
+                <div id="uploadStatus" class="upload-status" style="display: none;"></div>
+            </section>
+            
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <h2>Extracted Information</h2>
+                <div id="travelInfo" class="travel-info"></div>
+                <div id="calendarStatus" class="calendar-status"></div>
+            </section>
+            
+            <section class="email-section" style="margin-top: 2rem; padding: 1.5rem; background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+                <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">📧 Email Forwarding</h2>
+                <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+                    Forward emails with travel documents to automatically process them. Configure email in your environment variables.
+                </p>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button id="testEmailBtn" class="btn btn-secondary" style="width: auto;">Test Email Connection</button>
+                    <button id="checkEmailBtn" class="btn btn-primary" style="width: auto;">Check & Process Emails</button>
+                </div>
+                <div id="emailStatus" style="margin-top: 1rem; padding: 1rem; border-radius: var(--radius-md); display: none;"></div>
+                <div id="emailResults" style="margin-top: 1rem; display: none;"></div>
+            </section>
+            
+            <section class="calendar-section" style="margin-top: 2rem; padding: 1.5rem; background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+                <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">📅 Google Calendar</h2>
+                <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+                    Test your Google Calendar connection. Make sure credentials.json is configured.
+                </p>
+                <button id="testCalendarBtn" class="btn btn-secondary" style="width: auto;">Test Calendar Connection</button>
+                <div id="calendarTestResult" style="margin-top: 1rem; padding: 1rem; border-radius: var(--radius-md); display: none;"></div>
+            </section>
+            
+            <section class="test-section" style="margin-top: 2rem; padding: 1.5rem; background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+                <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">Test Gemini API</h2>
+                <button id="testGeminiBtn" class="btn btn-secondary" style="width: auto;">Test Gemini Connection</button>
+                <div id="geminiTestResult" style="margin-top: 1rem; padding: 1rem; border-radius: var(--radius-md); display: none;"></div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/main.js?v=4"></script>
+    <script src="/static/js/test.js?v=2"></script>
+    <script src="/static/js/email.js?v=1"></script>
+</body>
+</html>
+
