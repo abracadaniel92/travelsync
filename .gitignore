@@ -52,3 +52,8 @@ temp/
 # Docker
 .dockerignore
 
+# GitHub credentials
+github_credential
+*_credential
+*credentials
+
