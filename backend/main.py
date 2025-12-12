@@ -89,7 +89,7 @@ async def lifespan(app: FastAPI):
         yield
 
 app = FastAPI(
-    title="Documents to Calendar API", 
+    title="TravelSync API", 
     version="1.0.0",
     lifespan=lifespan
 )
@@ -135,7 +135,7 @@ async def root():
     frontend_index = frontend_path / "index.html"
     if frontend_index.exists():
         return FileResponse(str(frontend_index))
-    return {"message": "Documents to Calendar API"}
+    return {"message": "TravelSync API"}
 
 @app.get("/login")
 async def login_page():
@@ -531,17 +531,170 @@ async def test_calendar_connection(current_user: dict = Depends(get_current_user
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Calendar credentials not found: {str(e)}"
         )
-    except Exception as e:
+    except ValueError as e:
+        # This is raised when authentication is needed
         error_msg = str(e)
-        if "invalid_grant" in error_msg.lower() or "token" in error_msg.lower():
+        if "authentication required" in error_msg.lower() or "visit /api/calendar/auth/start" in error_msg.lower():
             return {
                 "success": False,
-                "error": "Authentication token expired. Please delete token.pickle and re-authenticate.",
-                "details": error_msg
+                "error": "Google Calendar authentication required. Please authenticate using the button below.",
+                "details": error_msg,
+                "needs_auth": True
+            }
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_msg
+        )
+    except Exception as e:
+        error_msg = str(e)
+        # Check for various authentication-related errors
+        auth_keywords = ["invalid_grant", "token", "expired", "authentication required", "authentication", "unauthorized", "credentials"]
+        if any(keyword in error_msg.lower() for keyword in auth_keywords):
+            return {
+                "success": False,
+                "error": "Google Calendar authentication required. Please authenticate using the button below.",
+                "details": error_msg,
+                "needs_auth": True
             }
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Calendar connection failed: {error_msg}"
+        )
+
+@app.get("/api/calendar/auth/start")
+async def start_calendar_auth(current_user: dict = Depends(get_current_user)):
+    """Get Google Calendar authorization URL"""
+    try:
+        import os
+        from pathlib import Path
+        from google_auth_oauthlib.flow import InstalledAppFlow
+        import json
+        import base64
+        import tempfile
+        
+        SCOPES = ['https://www.googleapis.com/auth/calendar']
+        
+        # Get credentials path
+        project_root = Path(__file__).parent.parent
+        credentials_path_str = os.getenv("GOOGLE_CALENDAR_CREDENTIALS_PATH", "/app/data/credentials.json")
+        credentials_path = Path(credentials_path_str)
+        
+        if not credentials_path.is_absolute():
+            credentials_path = project_root / credentials_path
+        
+        # Support reading from environment variable
+        credentials_json = os.getenv("GOOGLE_CALENDAR_CREDENTIALS_JSON") or os.getenv("CREDENTIALS_JSON")
+        if credentials_json:
+            try:
+                decoded = base64.b64decode(credentials_json).decode('utf-8')
+                credentials_data = json.loads(decoded)
+            except:
+                try:
+                    credentials_data = json.loads(credentials_json)
+                except:
+                    raise ValueError("Invalid GOOGLE_CALENDAR_CREDENTIALS_JSON format")
+            
+            temp_credentials = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+            json.dump(credentials_data, temp_credentials)
+            temp_credentials.close()
+            credentials_path = Path(temp_credentials.name)
+        
+        if not credentials_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Credentials not found at {credentials_path}"
+            )
+        
+        # Create flow and get authorization URL
+        flow = InstalledAppFlow.from_client_secrets_file(str(credentials_path), SCOPES)
+        flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'  # Use out-of-band flow
+        
+        authorization_url, _ = flow.authorization_url(prompt='consent')
+        
+        return {
+            "authorization_url": authorization_url,
+            "instructions": "Visit the URL above, authorize the app, and copy the authorization code. Then use /api/calendar/auth/complete with the code."
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to start authentication: {str(e)}"
+        )
+
+@app.post("/api/calendar/auth/complete")
+async def complete_calendar_auth(
+    code: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Complete Google Calendar authentication with authorization code"""
+    try:
+        import os
+        from pathlib import Path
+        from google_auth_oauthlib.flow import InstalledAppFlow
+        import json
+        import base64
+        import tempfile
+        import pickle
+        
+        SCOPES = ['https://www.googleapis.com/auth/calendar']
+        
+        # Get credentials path
+        project_root = Path(__file__).parent.parent
+        credentials_path_str = os.getenv("GOOGLE_CALENDAR_CREDENTIALS_PATH", "/app/data/credentials.json")
+        credentials_path = Path(credentials_path_str)
+        
+        if not credentials_path.is_absolute():
+            credentials_path = project_root / credentials_path
+        
+        # Support reading from environment variable
+        credentials_json = os.getenv("GOOGLE_CALENDAR_CREDENTIALS_JSON") or os.getenv("CREDENTIALS_JSON")
+        if credentials_json:
+            try:
+                decoded = base64.b64decode(credentials_json).decode('utf-8')
+                credentials_data = json.loads(decoded)
+            except:
+                try:
+                    credentials_data = json.loads(credentials_json)
+                except:
+                    raise ValueError("Invalid GOOGLE_CALENDAR_CREDENTIALS_JSON format")
+            
+            temp_credentials = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+            json.dump(credentials_data, temp_credentials)
+            temp_credentials.close()
+            credentials_path = Path(temp_credentials.name)
+        
+        if not credentials_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Credentials not found at {credentials_path}"
+            )
+        
+        # Get token path
+        token_path_str = os.getenv("GOOGLE_CALENDAR_TOKEN_PATH", "/app/data/token.pickle")
+        token_path = Path(token_path_str)
+        if not token_path.is_absolute():
+            token_path = project_root / token_path
+        
+        # Create flow and exchange code for token
+        flow = InstalledAppFlow.from_client_secrets_file(str(credentials_path), SCOPES)
+        flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
+        
+        flow.fetch_token(code=code)
+        creds = flow.credentials
+        
+        # Save token
+        token_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(token_path, 'wb') as token_file:
+            pickle.dump(creds, token_file)
+        
+        return {
+            "success": True,
+            "message": "Google Calendar authentication completed successfully!"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to complete authentication: {str(e)}"
         )
 
 @app.get("/api/test/gemini")

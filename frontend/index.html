@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documents to Calendar</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=3">
+    <title>TravelSync</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=5">
 </head>
 <body>
     <div class="app-container">
-        <header>
-            <h1>Documents to Calendar</h1>
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-icon-small">🗓️</div>
+                <h1>TravelSync</h1>
+            </div>
             <button id="logoutBtn" class="btn btn-secondary">Sign out</button>
         </header>
         
@@ -49,7 +52,7 @@
                 <div id="calendarStatus" class="calendar-status"></div>
             </section>
             
-            <section class="email-section" style="margin-top: 2rem; padding: 1.5rem; background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+            <section class="email-section" style="margin-top: 2rem; padding: 1.5rem; border-radius: var(--radius-lg);">
                 <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">📧 Email Forwarding</h2>
                 <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
                     Forward emails with travel documents to automatically process them. Configure email in your environment variables.
@@ -62,7 +65,7 @@
                 <div id="emailResults" style="margin-top: 1rem; display: none;"></div>
             </section>
             
-            <section class="calendar-section" style="margin-top: 2rem; padding: 1.5rem; background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+            <section class="calendar-section" style="margin-top: 2rem; padding: 1.5rem; border-radius: var(--radius-lg);">
                 <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">📅 Google Calendar</h2>
                 <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
                     Test your Google Calendar connection. Make sure credentials.json is configured.
@@ -71,7 +74,7 @@
                 <div id="calendarTestResult" style="margin-top: 1rem; padding: 1rem; border-radius: var(--radius-md); display: none;"></div>
             </section>
             
-            <section class="test-section" style="margin-top: 2rem; padding: 1.5rem; background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+            <section class="test-section" style="margin-top: 2rem; padding: 1.5rem; border-radius: var(--radius-lg);">
                 <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">Test Gemini API</h2>
                 <button id="testGeminiBtn" class="btn btn-secondary" style="width: auto;">Test Gemini Connection</button>
                 <div id="geminiTestResult" style="margin-top: 1rem; padding: 1rem; border-radius: var(--radius-md); display: none;"></div>
@@ -81,7 +84,7 @@
     
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/main.js?v=4"></script>
-    <script src="/static/js/test.js?v=2"></script>
+    <script src="/static/js/test.js?v=3"></script>
     <script src="/static/js/email.js?v=1"></script>
 </body>
 </html>

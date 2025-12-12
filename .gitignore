@@ -41,6 +41,9 @@ logs/
 credentials.json
 token.json
 token.pickle
+data/
+**/credentials.json
+**/token.pickle
 
 # Uploads
 uploads/

@@ -1,16 +1,21 @@
-# Documents to Calendar
+# TravelSync
 
-A web application that extracts travel information from documents (tickets, boarding passes, etc.) and automatically adds them to your calendar.
+A beautiful web application that extracts travel information from documents (tickets, boarding passes, hotel reservations, etc.) and automatically adds them to your Google Calendar. Supports multiple languages and automatically detects timezones.
+
+**TravelSync** - Sync your travel documents to your calendar effortlessly.
 
 ## Features
 
 - 🔐 Simple password-based authentication
-- 📄 Document upload (PDF, images)
+- 📄 Document upload (PDF, images) with drag & drop
+- 🌍 Multi-language support - automatically translates non-English documents
+- 🕐 Smart timezone detection - preserves correct times regardless of your location
 - 📧 Email forwarding support - automatically process travel documents from email
-- 🤖 AI-powered extraction using Google Gemini
+- 🤖 AI-powered extraction using Google Gemini (extracts ticket numbers, passenger info, prices, notes, etc.)
 - 📅 Automatic calendar integration (Google Calendar)
+- 🎨 Beautiful travel-themed UI with glassmorphism design
 - 🐳 Docker deployment ready
-- 🔒 Secure API key management via GitHub Secrets
+- 🔒 Secure API key management via environment variables
 
 ## Tech Stack
 
@@ -30,16 +35,10 @@ A web application that extracts travel information from documents (tickets, boar
 
 ### Quick Start with Docker
 
-1. **Set up GitHub Secrets** (for production):
-   - Go to your repository settings → Secrets and variables → Actions
-   - Add `GOOGLE_API_KEY` with your Gemini API key
-   - Add `ADMIN_PASSWORD` with your desired admin password (plain text, will be hashed automatically)
-   - Add `JWT_SECRET_KEY` with a strong random string
-
-2. **Create environment file** (for local development):
+1. **Create environment file**:
    ```bash
-   # Copy and edit
-   cp .env.example .env
+   # Copy the template
+   cp env.template .env
    ```
    
    Edit `.env` with your values:
@@ -48,14 +47,15 @@ A web application that extracts travel information from documents (tickets, boar
    ADMIN_USERNAME=admin
    ADMIN_PASSWORD=your_secure_password
    JWT_SECRET_KEY=your-jwt-secret-key-change-in-production
+   CREDENTIALS_JSON=your-base64-encoded-google-calendar-credentials
    ```
 
-3. **Run with Docker Compose**:
+2. **Run with Docker Compose**:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
-4. **Access the application**:
+3. **Access the application**:
    - Open `http://localhost:8000`
    - Login with the admin credentials you set
 
@@ -77,24 +77,32 @@ uvicorn main:app --reload
 
 The backend serves the frontend automatically at the root URL.
 
-### Google Calendar Integration (Optional)
+### Google Calendar Integration
 
 1. **Enable Google Calendar API**:
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
    - Create a new project or select existing
    - Enable Google Calendar API
-   - Create OAuth 2.0 credentials
+   - Create OAuth 2.0 credentials (Desktop app type)
    - Download `credentials.json`
 
-2. **Place credentials file**:
+2. **Add credentials to environment**:
    ```bash
-   cp credentials.json ./credentials.json
+   # Option 1: Base64 encode and add to .env
+   base64 -i credentials.json | tr -d '\n' > credentials_base64.txt
+   # Then add to .env: CREDENTIALS_JSON=<content>
+   
+   # Option 2: Place in data/ directory (for Docker)
+   mkdir -p data
+   cp credentials.json data/
    ```
 
-3. **First run authentication**:
-   - On first document upload, the app will open a browser for OAuth
-   - Authorize access to your Google Calendar
-   - Token will be saved for future use
+3. **Authenticate via web interface**:
+   - After starting the app, go to the "Google Calendar" section
+   - Click "Test Calendar Connection"
+   - If authentication is needed, click "Start Authentication"
+   - Follow the OAuth flow in your browser
+   - Paste the authorization code to complete authentication
 
 ### Email Forwarding (Optional)
 
@@ -137,7 +145,7 @@ Automatically process travel documents sent via email:
 2. **Set up Caddy reverse proxy**:
    Add to your Caddyfile:
    ```
-   documents.gmojsoski.com {
+   your-domain.com {
        reverse_proxy localhost:8000
    }
    ```
@@ -154,20 +162,32 @@ Automatically process travel documents sent via email:
 ## Project Structure
 
 ```
-DocumentsToCalendar/
-├── backend/           # FastAPI backend
-│   ├── main.py       # Main application
-│   ├── auth.py       # Authentication logic
-│   ├── models.py     # Database models
-│   ├── services/     # Business logic
+TravelSync/
+├── backend/              # FastAPI backend
+│   ├── main.py          # Main application
+│   ├── auth.py          # Authentication logic
+│   ├── models.py        # Database models
+│   ├── services/        # Business logic
+│   │   ├── calendar_service.py    # Google Calendar integration
+│   │   ├── document_processor.py  # Gemini AI document processing
+│   │   └── email_service.py        # Email forwarding
 │   └── requirements.txt
-├── frontend/         # Static frontend
-│   ├── index.html
-│   ├── login.html
+├── frontend/            # Static frontend
+│   ├── index.html      # Main app page
+│   ├── login.html      # Login page
 │   ├── css/
+│   │   └── style.css   # Travel-themed styling
 │   └── js/
+│       ├── auth.js     # Authentication
+│       ├── main.js     # Document upload
+│       ├── test.js     # API testing
+│       └── email.js    # Email features
+├── data/               # Runtime data (gitignored)
+│   ├── credentials.json
+│   └── token.pickle
 ├── docker-compose.yml
 ├── Dockerfile
+├── env.template        # Environment variables template
 └── README.md
 ```
 

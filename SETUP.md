@@ -170,7 +170,7 @@ To enable automatic calendar event creation:
 5. **Configure Caddy**:
    Add to your Caddyfile:
    ```
-   documents.gmojsoski.com {
+   your-domain.com {
        reverse_proxy localhost:8000
    }
    ```
