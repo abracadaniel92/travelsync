@@ -1,13 +1,36 @@
 """
-Document processing service using Google Gemini AI
+Document processing service using Google Gemini AI with Tesseract OCR preprocessing
 """
 
 import google.generativeai as genai
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
 import io
 import os
 import base64
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
+import numpy as np
+
+# Try to import OCR and image processing libraries
+try:
+    import pytesseract
+    TESSERACT_AVAILABLE = True
+except ImportError:
+    TESSERACT_AVAILABLE = False
+    print("Warning: pytesseract not available. OCR preprocessing will be skipped.")
+
+try:
+    import cv2
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
+    print("Warning: opencv-python not available. Advanced image preprocessing will be limited.")
+
+try:
+    from skimage import restoration, filters
+    SKIMAGE_AVAILABLE = True
+except ImportError:
+    SKIMAGE_AVAILABLE = False
+    print("Warning: scikit-image not available. Some image enhancement features will be limited.")
 
 # Configure Gemini
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -17,6 +40,158 @@ if GOOGLE_API_KEY:
 # Cache the working model to avoid re-discovery (saves API calls)
 _cached_model = None
 _cached_model_name = None
+
+def preprocess_image_for_ocr(image: Image.Image) -> Image.Image:
+    """
+    Preprocess image to improve OCR accuracy:
+    - Convert to grayscale
+    - Enhance contrast
+    - Denoise
+    - Sharpen
+    """
+    # Convert to RGB if needed
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    
+    # Convert to grayscale for better OCR
+    if OPENCV_AVAILABLE:
+        try:
+            # Use OpenCV for advanced preprocessing
+            img_array = np.array(image)
+            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            
+            # Denoise
+            if SKIMAGE_AVAILABLE:
+                try:
+                    gray = restoration.denoise_nl_means(gray, patch_size=5, patch_distance=6, h=0.1)
+                except:
+                    gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
+            else:
+                gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
+            
+            # Enhance contrast using CLAHE (Contrast Limited Adaptive Histogram Equalization)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            gray = clahe.apply(gray)
+            
+            # Sharpen
+            kernel = np.array([[-1, -1, -1],
+                             [-1,  9, -1],
+                             [-1, -1, -1]])
+            gray = cv2.filter2D(gray, -1, kernel)
+            
+            # Convert back to PIL Image
+            image = Image.fromarray(gray).convert('RGB')
+        except Exception as e:
+            print(f"OpenCV preprocessing failed, using PIL fallback: {e}")
+            # Fallback to PIL-based enhancement
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(1.5)
+            enhancer = ImageEnhance.Sharpness(image)
+            image = enhancer.enhance(2.0)
+    else:
+        # Use PIL for basic enhancement
+        enhancer = ImageEnhance.Contrast(image)
+        image = enhancer.enhance(1.5)
+        enhancer = ImageEnhance.Sharpness(image)
+        image = enhancer.enhance(2.0)
+    
+    return image
+
+def extract_text_with_ocr(image: Image.Image) -> Tuple[str, float]:
+    """
+    Extract text from image using Tesseract OCR.
+    Returns (extracted_text, confidence_score)
+    """
+    if not TESSERACT_AVAILABLE:
+        return "", 0.0
+    
+    try:
+        # Preprocess image for better OCR
+        processed_image = preprocess_image_for_ocr(image.copy())
+        
+        # Run OCR with multiple language support (English and German)
+        # Use PSM 6 (Assume a single uniform block of text) for better results
+        custom_config = r'--oem 3 --psm 6 -l eng+deu'
+        
+        # Extract text and confidence
+        ocr_data = pytesseract.image_to_data(processed_image, config=custom_config, output_type=pytesseract.Output.DICT)
+        
+        # Combine all text with confidence scores
+        text_parts = []
+        confidences = []
+        
+        for i in range(len(ocr_data['text'])):
+            text = ocr_data['text'][i].strip()
+            conf = float(ocr_data['conf'][i]) if ocr_data['conf'][i] != -1 else 0.0
+            
+            if text and conf > 0:
+                text_parts.append(text)
+                confidences.append(conf)
+        
+        extracted_text = ' '.join(text_parts)
+        avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+        
+        print(f"OCR extracted {len(extracted_text)} characters with average confidence: {avg_confidence:.1f}%")
+        
+        return extracted_text, avg_confidence
+    except Exception as e:
+        print(f"OCR extraction failed: {e}")
+        return "", 0.0
+
+def enhance_image_for_vision(image: Image.Image) -> Image.Image:
+    """
+    Enhance image for better vision model processing:
+    - Improve contrast and brightness
+    - Reduce noise
+    - Sharpen edges
+    """
+    # Convert to RGB if needed
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    
+    if OPENCV_AVAILABLE:
+        try:
+            img_array = np.array(image)
+            
+            # Convert to LAB color space for better enhancement
+            lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
+            l, a, b = cv2.split(lab)
+            
+            # Apply CLAHE to L channel (lightness)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            l = clahe.apply(l)
+            
+            # Merge channels and convert back to RGB
+            lab = cv2.merge([l, a, b])
+            img_array = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+            
+            # Denoise
+            if SKIMAGE_AVAILABLE:
+                try:
+                    img_array = restoration.denoise_nl_means(img_array, patch_size=5, patch_distance=6, h=0.1)
+                except:
+                    img_array = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
+            else:
+                img_array = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
+            
+            image = Image.fromarray(img_array)
+        except Exception as e:
+            print(f"OpenCV enhancement failed, using PIL fallback: {e}")
+            # Fallback to PIL
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(1.2)
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(1.1)
+    else:
+        # Use PIL for basic enhancement
+        enhancer = ImageEnhance.Contrast(image)
+        image = enhancer.enhance(1.2)
+        enhancer = ImageEnhance.Brightness(image)
+        image = enhancer.enhance(1.1)
+        enhancer = ImageEnhance.Sharpness(image)
+        image = enhancer.enhance(1.3)
+    
+    return image
 
 async def process_document(file_contents: bytes, content_type: str) -> Optional[Dict]:
     """
@@ -61,6 +236,10 @@ async def process_document(file_contents: bytes, content_type: str) -> Optional[
         
         print(f"Using Gemini model: {model_name or 'will be determined during processing'}")
         
+        # Initialize OCR variables (used for both images and PDFs)
+        ocr_text = ""
+        ocr_confidence = 0.0
+        
         # Prepare image for processing
         if content_type.startswith("image/"):
             # Open image and convert to RGB format (required for Gemini)
@@ -89,7 +268,22 @@ async def process_document(file_contents: bytes, content_type: str) -> Optional[
             # Ensure image is loaded into memory
             image.load()
             
-            print(f"Processed image: original_format={content_type}, mode={image.mode}, size={image.size}")
+            print(f"Loaded image: original_format={content_type}, mode={image.mode}, size={image.size}")
+            
+            # Extract text using OCR before sending to Gemini
+            if TESSERACT_AVAILABLE:
+                print("Running OCR preprocessing...")
+                ocr_text, ocr_confidence = extract_text_with_ocr(image)
+                if ocr_text and len(ocr_text.strip()) > 50 and ocr_confidence > 30:
+                    print(f"OCR extracted {len(ocr_text)} characters with {ocr_confidence:.1f}% confidence")
+                else:
+                    print(f"OCR extracted limited text ({len(ocr_text)} chars, {ocr_confidence:.1f}% confidence), will rely on vision model")
+            
+            # Enhance image for better vision processing
+            print("Enhancing image for vision processing...")
+            image = enhance_image_for_vision(image)
+            
+            print(f"Processed image: mode={image.mode}, size={image.size}")
         elif content_type == "application/pdf":
             # For PDFs, try to extract text first (more accurate than OCR)
             # If text extraction fails or returns little text, fall back to image conversion
@@ -254,6 +448,17 @@ Return ONLY valid JSON, no other text."""
                 
                 image.load()
                 print(f"Converted PDF page 1 of {page_count} to image: mode={image.mode}, size={image.size}")
+                
+                # Run OCR on PDF-converted image as well
+                if TESSERACT_AVAILABLE:
+                    print("Running OCR on PDF-converted image...")
+                    ocr_text, ocr_confidence = extract_text_with_ocr(image)
+                    if ocr_text and len(ocr_text.strip()) > 50 and ocr_confidence > 30:
+                        print(f"OCR extracted {len(ocr_text)} characters with {ocr_confidence:.1f}% confidence from PDF image")
+                
+                # Enhance PDF-converted image
+                print("Enhancing PDF-converted image for vision processing...")
+                image = enhance_image_for_vision(image)
             except ValueError as e:
                 # Re-raise ValueError as-is
                 raise
@@ -270,7 +475,17 @@ Return ONLY valid JSON, no other text."""
             raise ValueError(f"Unsupported content type: {content_type}")
         
         # Create prompt for travel document extraction
-        prompt = """Extract travel information from this document. It could be a flight ticket, bus ticket, train ticket, hotel reservation, or other travel document.
+        # Include OCR text if available to improve accuracy
+        ocr_context = ""
+        if ocr_text and len(ocr_text.strip()) > 50 and ocr_confidence > 30:
+            ocr_context = f"""
+
+IMPORTANT: The following text was extracted from this document using OCR (confidence: {ocr_confidence:.1f}%):
+{ocr_text}
+
+Use this OCR text to help extract information, but also analyze the image visually to ensure accuracy and capture any information the OCR might have missed."""
+        
+        prompt = f"""Extract travel information from this document. It could be a flight ticket, bus ticket, train ticket, hotel reservation, or other travel document.{ocr_context}
 
 IMPORTANT: If this document is NOT in English, first translate all visible text to English in your mind, then extract the information from the English translation. All extracted information should be in English.
 
