@@ -251,10 +251,10 @@ async def test_email_connection(current_user: dict = Depends(get_current_user)):
         try:
             # Test by selecting inbox
             mail.select("INBOX")
-            status, messages = mail.search(None, "ALL")
+            imap_status, messages = mail.search(None, "ALL")
             
             # Count total emails (just to verify connection works)
-            email_count = len(messages[0].split()) if status == "OK" else 0
+            email_count = len(messages[0].split()) if imap_status == "OK" else 0
             
             mail.close()
             mail.logout()
