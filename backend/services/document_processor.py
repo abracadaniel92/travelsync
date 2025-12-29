@@ -293,13 +293,14 @@ async def process_document(file_contents: bytes, content_type: str) -> Optional[
             #         print(f"OCR failed, continuing without OCR: {e}")
             #         ocr_text = ""
             
-            # Enhance image for better vision processing (lightweight enhancement)
-            print("Enhancing image for vision processing...")
-            try:
-                image = enhance_image_for_vision(image)
-            except Exception as e:
-                print(f"Image enhancement failed, using original: {e}")
-                # Continue with original image if enhancement fails
+            # Skip image enhancement to speed up processing - Gemini can handle original images
+            # Enhancement was causing delays and isn't necessary for most documents
+            print("Skipping image enhancement (using original image for faster processing)...")
+            # Uncomment below to enable enhancement if needed for difficult documents
+            # try:
+            #     image = enhance_image_for_vision(image)
+            # except Exception as e:
+            #     print(f"Image enhancement failed, using original: {e}")
             
             print(f"Processed image: mode={image.mode}, size={image.size}")
         elif content_type == "application/pdf":
