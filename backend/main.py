@@ -181,16 +181,27 @@ async def upload_document(
     """
     Upload and process a document to extract travel information
     """
+    # Read file contents once and store (prevents "body is locked" error)
+    try:
+        contents = await file.read()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error reading file: {str(e)}"
+        )
+    
+    # Store content type before file object is consumed
+    content_type = file.content_type or "application/octet-stream"
+    
     # Validate file type
     allowed_types = ["image/jpeg", "image/png", "image/jpg", "application/pdf"]
-    if file.content_type not in allowed_types:
+    if content_type not in allowed_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid file type. Only PDF and images are allowed."
         )
     
     # Validate file size (max 5MB)
-    contents = await file.read()
     if len(contents) > 5 * 1024 * 1024:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -198,8 +209,8 @@ async def upload_document(
         )
     
     try:
-        # Process document with AI
-        travel_info = await process_document(contents, file.content_type)
+        # Process document with AI (using stored contents, not file object)
+        travel_info = await process_document(contents, content_type)
         
         # Add to calendar
         if travel_info:
@@ -214,7 +225,16 @@ async def upload_document(
                 "success": False,
                 "message": "Could not extract travel information from document"
             }
+    except ValueError as e:
+        # ValueError from process_document (e.g., invalid API key, model not found)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error processing document: {error_trace}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing document: {str(e)}"
