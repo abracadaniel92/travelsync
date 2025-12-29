@@ -340,20 +340,21 @@ async def process_document(file_contents: bytes, content_type: str) -> Optional[
                     
                     # Process text directly with Gemini (more accurate than OCR)
                     # We'll pass the text as part of the prompt
-                    text_prompt = f"""Extract travel information from this travel document text:
+                    # Use regular string (not f-string) to avoid format specifier issues
+                    text_prompt = """Extract travel information from this travel document text:
 
-{pdf_text}
+""" + pdf_text + """
 
 IMPORTANT: If this document is NOT in English, first translate all text to English, then extract the information. Work with the English translation.
 
 Extract the information in this exact JSON format:
-{{
+{
     "title": "[Type] from [full departure location] to [full destination location]",
     "start_date": "ISO 8601 datetime with EXACT travel date and time (YYYY-MM-DDTHH:MM:SS). Use TRAVEL date, NOT invoice date. Use EXACT time as shown - do NOT add or subtract hours for timezone.",
     "end_date": "ISO 8601 datetime with EXACT arrival date and time or null. Use EXACT time as shown - do NOT add or subtract hours for timezone.",
     "location": "Destination/arrival location with FULL details as written (e.g., 'München Hbf, Seidlstraße 3a' or 'Memmingen Airport, Terminal 1')",
     "description": "COMPREHENSIVE details: Type (Flight/Bus/Train/Hotel), Ticket Number: [if visible], Booking/Order Number: [if visible], Trip ID: [if visible], Company: [full company name], From: [full departure location with details], To: [full destination location with address], Passenger: [name(s) with email/phone if available], Passengers: [count if multiple], Price: [if visible], Invoice Date: [if visible], Important Notes: [all notes, instructions, special conditions]"
-}}
+}
 
 CRITICAL EXTRACTION RULES:
 - If the document is NOT in English, translate all text to English first, then extract information from the English translation
