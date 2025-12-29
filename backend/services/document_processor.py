@@ -63,15 +63,28 @@ def preprocess_image_for_ocr(image: Image.Image) -> Image.Image:
             # Denoise
             if SKIMAGE_AVAILABLE:
                 try:
-                    gray = restoration.denoise_nl_means(gray, patch_size=5, patch_distance=6, h=0.1)
+                    gray_denoised = restoration.denoise_nl_means(gray, patch_size=5, patch_distance=6, h=0.1)
+                    # Ensure it's uint8 format for CLAHE
+                    if gray_denoised.dtype != np.uint8:
+                        gray = (np.clip(gray_denoised, 0, 255)).astype(np.uint8)
+                    else:
+                        gray = gray_denoised
                 except:
                     gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
             else:
                 gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
             
+            # Ensure gray is uint8 before CLAHE
+            if gray.dtype != np.uint8:
+                gray = (np.clip(gray, 0, 255)).astype(np.uint8)
+            
             # Enhance contrast using CLAHE (Contrast Limited Adaptive Histogram Equalization)
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            gray = clahe.apply(gray)
+            try:
+                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                gray = clahe.apply(gray)
+            except Exception as e:
+                # If CLAHE fails, use simpler contrast enhancement
+                gray = cv2.convertScaleAbs(gray, alpha=1.5, beta=10)
             
             # Sharpen
             kernel = np.array([[-1, -1, -1],
@@ -158,8 +171,15 @@ def enhance_image_for_vision(image: Image.Image) -> Image.Image:
             l, a, b = cv2.split(lab)
             
             # Apply CLAHE to L channel (lightness)
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            l = clahe.apply(l)
+            # Ensure L is uint8 format
+            if l.dtype != np.uint8:
+                l = (np.clip(l, 0, 255)).astype(np.uint8)
+            try:
+                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                l = clahe.apply(l)
+            except Exception as e:
+                # If CLAHE fails, use simpler contrast enhancement
+                l = cv2.convertScaleAbs(l, alpha=1.3, beta=10)
             
             # Merge channels and convert back to RGB
             lab = cv2.merge([l, a, b])
@@ -270,18 +290,31 @@ async def process_document(file_contents: bytes, content_type: str) -> Optional[
             
             print(f"Loaded image: original_format={content_type}, mode={image.mode}, size={image.size}")
             
-            # Extract text using OCR before sending to Gemini
-            if TESSERACT_AVAILABLE:
+            # Extract text using OCR before sending to Gemini (optional, can skip for speed)
+            # Only run OCR if image is large or likely to have text (skip for small images)
+            if TESSERACT_AVAILABLE and (image.size[0] * image.size[1] > 50000):  # Only for images > ~224x224
                 print("Running OCR preprocessing...")
-                ocr_text, ocr_confidence = extract_text_with_ocr(image)
-                if ocr_text and len(ocr_text.strip()) > 50 and ocr_confidence > 30:
-                    print(f"OCR extracted {len(ocr_text)} characters with {ocr_confidence:.1f}% confidence")
-                else:
-                    print(f"OCR extracted limited text ({len(ocr_text)} chars, {ocr_confidence:.1f}% confidence), will rely on vision model")
+                try:
+                    ocr_text, ocr_confidence = extract_text_with_ocr(image)
+                    if ocr_text and len(ocr_text.strip()) > 50 and ocr_confidence > 30:
+                        print(f"OCR extracted {len(ocr_text)} characters with {ocr_confidence:.1f}% confidence")
+                    else:
+                        print(f"OCR extracted limited text ({len(ocr_text)} chars, {ocr_confidence:.1f}% confidence), will rely on vision model")
+                        ocr_text = ""  # Clear if not useful
+                except Exception as e:
+                    print(f"OCR failed, continuing without OCR: {e}")
+                    ocr_text = ""
+            else:
+                print("Skipping OCR (image too small or OCR unavailable)")
+                ocr_text = ""
             
-            # Enhance image for better vision processing
+            # Enhance image for better vision processing (lightweight enhancement)
             print("Enhancing image for vision processing...")
-            image = enhance_image_for_vision(image)
+            try:
+                image = enhance_image_for_vision(image)
+            except Exception as e:
+                print(f"Image enhancement failed, using original: {e}")
+                # Continue with original image if enhancement fails
             
             print(f"Processed image: mode={image.mode}, size={image.size}")
         elif content_type == "application/pdf":
