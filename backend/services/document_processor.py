@@ -60,19 +60,9 @@ def preprocess_image_for_ocr(image: Image.Image) -> Image.Image:
             img_array = np.array(image)
             gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
             
-            # Denoise
-            if SKIMAGE_AVAILABLE:
-                try:
-                    gray_denoised = restoration.denoise_nl_means(gray, patch_size=5, patch_distance=6, h=0.1)
-                    # Ensure it's uint8 format for CLAHE
-                    if gray_denoised.dtype != np.uint8:
-                        gray = (np.clip(gray_denoised, 0, 255)).astype(np.uint8)
-                    else:
-                        gray = gray_denoised
-                except:
-                    gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
-            else:
-                gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
+            # Denoise (use fast OpenCV method - skip slow scikit-image denoising)
+            # scikit-image denoise_nl_means is VERY slow (can take 30+ seconds), so we skip it
+            gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
             
             # Ensure gray is uint8 before CLAHE
             if gray.dtype != np.uint8:
@@ -185,14 +175,9 @@ def enhance_image_for_vision(image: Image.Image) -> Image.Image:
             lab = cv2.merge([l, a, b])
             img_array = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
             
-            # Denoise
-            if SKIMAGE_AVAILABLE:
-                try:
-                    img_array = restoration.denoise_nl_means(img_array, patch_size=5, patch_distance=6, h=0.1)
-                except:
-                    img_array = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
-            else:
-                img_array = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
+            # Denoise (use fast OpenCV method - skip slow scikit-image denoising)
+            # scikit-image denoise_nl_means is VERY slow (can take 30+ seconds), so we skip it
+            img_array = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
             
             image = Image.fromarray(img_array)
         except Exception as e:
@@ -291,22 +276,22 @@ async def process_document(file_contents: bytes, content_type: str) -> Optional[
             print(f"Loaded image: original_format={content_type}, mode={image.mode}, size={image.size}")
             
             # Extract text using OCR before sending to Gemini (optional, can skip for speed)
-            # Only run OCR if image is large or likely to have text (skip for small images)
-            if TESSERACT_AVAILABLE and (image.size[0] * image.size[1] > 50000):  # Only for images > ~224x224
-                print("Running OCR preprocessing...")
-                try:
-                    ocr_text, ocr_confidence = extract_text_with_ocr(image)
-                    if ocr_text and len(ocr_text.strip()) > 50 and ocr_confidence > 30:
-                        print(f"OCR extracted {len(ocr_text)} characters with {ocr_confidence:.1f}% confidence")
-                    else:
-                        print(f"OCR extracted limited text ({len(ocr_text)} chars, {ocr_confidence:.1f}% confidence), will rely on vision model")
-                        ocr_text = ""  # Clear if not useful
-                except Exception as e:
-                    print(f"OCR failed, continuing without OCR: {e}")
-                    ocr_text = ""
-            else:
-                print("Skipping OCR (image too small or OCR unavailable)")
-                ocr_text = ""
+            # Skip OCR by default to speed up processing - Gemini vision is usually sufficient
+            # Only run OCR if explicitly needed (can be enabled for difficult documents)
+            ocr_text = ""
+            ocr_confidence = 0.0
+            # Uncomment below to enable OCR (slower but sometimes more accurate)
+            # if TESSERACT_AVAILABLE and (image.size[0] * image.size[1] > 50000):
+            #     print("Running OCR preprocessing...")
+            #     try:
+            #         ocr_text, ocr_confidence = extract_text_with_ocr(image)
+            #         if ocr_text and len(ocr_text.strip()) > 50 and ocr_confidence > 30:
+            #             print(f"OCR extracted {len(ocr_text)} characters with {ocr_confidence:.1f}% confidence")
+            #         else:
+            #             ocr_text = ""
+            #     except Exception as e:
+            #         print(f"OCR failed, continuing without OCR: {e}")
+            #         ocr_text = ""
             
             # Enhance image for better vision processing (lightweight enhancement)
             print("Enhancing image for vision processing...")
@@ -419,7 +404,13 @@ Return ONLY valid JSON, no other text."""
                     for model_name in text_models:
                         try:
                             text_model = genai.GenerativeModel(model_name)
-                            response = text_model.generate_content(text_prompt)
+                            # Run in thread pool to prevent blocking (with timeout)
+                            import asyncio
+                            import concurrent.futures
+                            loop = asyncio.get_event_loop()
+                            with concurrent.futures.ThreadPoolExecutor() as executor:
+                                future = loop.run_in_executor(executor, text_model.generate_content, text_prompt)
+                                response = await asyncio.wait_for(future, timeout=30.0)
                             print(f"Successfully used text model: {model_name}")
                             break
                         except Exception as e:
@@ -625,7 +616,13 @@ If you cannot find specific information, use null for that field. Always return 
                     
                     # Pass the PIL Image directly to Gemini - no pixel manipulation to preserve quality
                     # Gemini accepts PIL.Image.Image objects directly
-                    response = test_model.generate_content([image, prompt])
+                    # Run in thread pool to prevent blocking (with timeout)
+                    import asyncio
+                    import concurrent.futures
+                    loop = asyncio.get_event_loop()
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = loop.run_in_executor(executor, test_model.generate_content, [image, prompt])
+                        response = await asyncio.wait_for(future, timeout=30.0)
                     # Success! Cache this model for future use
                     _cached_model = test_model
                     _cached_model_name = model_name_attempt
@@ -656,7 +653,13 @@ If you cannot find specific information, use null for that field. Always return 
                             img_base64 = base64.b64encode(img_bytes.getvalue()).decode('utf-8')
                             # Try with base64 data URI
                             data_uri = f"data:image/png;base64,{img_base64}"
-                            response = test_model.generate_content([data_uri, prompt])
+                            # Run in thread pool to prevent blocking (with timeout)
+                            import asyncio
+                            import concurrent.futures
+                            loop = asyncio.get_event_loop()
+                            with concurrent.futures.ThreadPoolExecutor() as executor:
+                                future = loop.run_in_executor(executor, test_model.generate_content, [data_uri, prompt])
+                                response = await asyncio.wait_for(future, timeout=30.0)
                             _cached_model = test_model
                             _cached_model_name = model_name_attempt
                             model_name = model_name_attempt
@@ -677,7 +680,13 @@ If you cannot find specific information, use null for that field. Always return 
                     image = image.convert('RGB')
                 
                 # Pass the PIL Image directly to Gemini - preserve original quality
-                response = model.generate_content([image, prompt])
+                # Run in thread pool to prevent blocking (with timeout)
+                import asyncio
+                import concurrent.futures
+                loop = asyncio.get_event_loop()
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = loop.run_in_executor(executor, model.generate_content, [image, prompt])
+                    response = await asyncio.wait_for(future, timeout=30.0)
             except Exception as e:
                 # Cached model failed, clear cache and try again
                 error_msg = str(e)
@@ -693,7 +702,12 @@ If you cannot find specific information, use null for that field. Always return 
                         image = image.convert('RGB')
                     
                     # Pass the PIL Image directly - preserve quality
-                    response = test_model.generate_content([image, prompt])
+                    # Add timeout to prevent hanging (30 seconds max)
+                    import asyncio
+                    response = await asyncio.wait_for(
+                        asyncio.to_thread(test_model.generate_content, [image, prompt]),
+                        timeout=30.0
+                    )
                     _cached_model = test_model
                     _cached_model_name = 'gemini-1.5-flash-latest'
                     model_name = 'gemini-1.5-flash-latest'
