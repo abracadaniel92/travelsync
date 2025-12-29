@@ -88,10 +88,19 @@ async function authenticatedFetch(url, options = {}) {
         'Authorization': `Bearer ${token}`
     };
     
-    return fetch(url, {
+    const response = await fetch(url, {
         ...options,
         headers
     });
+    
+    // If token expired (401), clear it and redirect to login
+    if (response.status === 401) {
+        localStorage.removeItem('auth_token');
+        window.location.href = '/login';
+        throw new Error('Session expired. Please log in again.');
+    }
+    
+    return response;
 }
 
 // Login form handler
