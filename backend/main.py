@@ -181,6 +181,17 @@ async def upload_document(
     """
     Upload and process a document to extract travel information
     """
+    # Store content type FIRST before reading file (prevents "body is locked" error)
+    content_type = file.content_type or "application/octet-stream"
+    
+    # Validate file type BEFORE reading
+    allowed_types = ["image/jpeg", "image/png", "image/jpg", "application/pdf"]
+    if content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Only PDF and images are allowed."
+        )
+    
     # Read file contents once and store (prevents "body is locked" error)
     try:
         contents = await file.read()
@@ -188,17 +199,6 @@ async def upload_document(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error reading file: {str(e)}"
-        )
-    
-    # Store content type before file object is consumed
-    content_type = file.content_type or "application/octet-stream"
-    
-    # Validate file type
-    allowed_types = ["image/jpeg", "image/png", "image/jpg", "application/pdf"]
-    if content_type not in allowed_types:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid file type. Only PDF and images are allowed."
         )
     
     # Validate file size (max 5MB)
