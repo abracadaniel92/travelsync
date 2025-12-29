@@ -404,13 +404,19 @@ Return ONLY valid JSON, no other text."""
                     for model_name in text_models:
                         try:
                             text_model = genai.GenerativeModel(model_name)
-                            # Run in thread pool to prevent blocking (with timeout)
+                            # Run in thread pool with timeout to prevent hanging
                             import asyncio
                             import concurrent.futures
                             loop = asyncio.get_event_loop()
-                            with concurrent.futures.ThreadPoolExecutor() as executor:
+                            executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                            try:
                                 future = loop.run_in_executor(executor, text_model.generate_content, text_prompt)
                                 response = await asyncio.wait_for(future, timeout=30.0)
+                            except asyncio.TimeoutError:
+                                executor.shutdown(wait=False)
+                                raise ValueError(f"Gemini API call timed out after 30 seconds for model {model_name}")
+                            finally:
+                                executor.shutdown(wait=True)
                             print(f"Successfully used text model: {model_name}")
                             break
                         except Exception as e:
@@ -616,13 +622,19 @@ If you cannot find specific information, use null for that field. Always return 
                     
                     # Pass the PIL Image directly to Gemini - no pixel manipulation to preserve quality
                     # Gemini accepts PIL.Image.Image objects directly
-                    # Run in thread pool to prevent blocking (with timeout)
+                    # Run in thread pool with timeout to prevent hanging
                     import asyncio
                     import concurrent.futures
                     loop = asyncio.get_event_loop()
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                    try:
                         future = loop.run_in_executor(executor, test_model.generate_content, [image, prompt])
                         response = await asyncio.wait_for(future, timeout=30.0)
+                    except asyncio.TimeoutError:
+                        executor.shutdown(wait=False)
+                        raise ValueError(f"Gemini API call timed out after 30 seconds for model {model_name_attempt}")
+                    finally:
+                        executor.shutdown(wait=True)
                     # Success! Cache this model for future use
                     _cached_model = test_model
                     _cached_model_name = model_name_attempt
@@ -653,13 +665,19 @@ If you cannot find specific information, use null for that field. Always return 
                             img_base64 = base64.b64encode(img_bytes.getvalue()).decode('utf-8')
                             # Try with base64 data URI
                             data_uri = f"data:image/png;base64,{img_base64}"
-                            # Run in thread pool to prevent blocking (with timeout)
+                            # Run in thread pool with timeout to prevent hanging
                             import asyncio
                             import concurrent.futures
                             loop = asyncio.get_event_loop()
-                            with concurrent.futures.ThreadPoolExecutor() as executor:
+                            executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                            try:
                                 future = loop.run_in_executor(executor, test_model.generate_content, [data_uri, prompt])
                                 response = await asyncio.wait_for(future, timeout=30.0)
+                            except asyncio.TimeoutError:
+                                executor.shutdown(wait=False)
+                                raise ValueError(f"Gemini API call timed out after 30 seconds for model {model_name_attempt}")
+                            finally:
+                                executor.shutdown(wait=True)
                             _cached_model = test_model
                             _cached_model_name = model_name_attempt
                             model_name = model_name_attempt
@@ -680,13 +698,19 @@ If you cannot find specific information, use null for that field. Always return 
                     image = image.convert('RGB')
                 
                 # Pass the PIL Image directly to Gemini - preserve original quality
-                # Run in thread pool to prevent blocking (with timeout)
+                # Run in thread pool with timeout to prevent hanging
                 import asyncio
                 import concurrent.futures
                 loop = asyncio.get_event_loop()
-                with concurrent.futures.ThreadPoolExecutor() as executor:
+                executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                try:
                     future = loop.run_in_executor(executor, model.generate_content, [image, prompt])
                     response = await asyncio.wait_for(future, timeout=30.0)
+                except asyncio.TimeoutError:
+                    executor.shutdown(wait=False)
+                    raise ValueError(f"Gemini API call timed out after 30 seconds")
+                finally:
+                    executor.shutdown(wait=True)
             except Exception as e:
                 # Cached model failed, clear cache and try again
                 error_msg = str(e)
