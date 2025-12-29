@@ -275,32 +275,32 @@ async def process_document(file_contents: bytes, content_type: str) -> Optional[
             
             print(f"Loaded image: original_format={content_type}, mode={image.mode}, size={image.size}")
             
-            # Extract text using OCR before sending to Gemini (optional, can skip for speed)
-            # Skip OCR by default to speed up processing - Gemini vision is usually sufficient
-            # Only run OCR if explicitly needed (can be enabled for difficult documents)
+            # Extract text using OCR before sending to Gemini (enabled for best processing)
+            # OCR helps improve accuracy, especially for documents with text
             ocr_text = ""
             ocr_confidence = 0.0
-            # Uncomment below to enable OCR (slower but sometimes more accurate)
-            # if TESSERACT_AVAILABLE and (image.size[0] * image.size[1] > 50000):
-            #     print("Running OCR preprocessing...")
-            #     try:
-            #         ocr_text, ocr_confidence = extract_text_with_ocr(image)
-            #         if ocr_text and len(ocr_text.strip()) > 50 and ocr_confidence > 30:
-            #             print(f"OCR extracted {len(ocr_text)} characters with {ocr_confidence:.1f}% confidence")
-            #         else:
-            #             ocr_text = ""
-            #     except Exception as e:
-            #         print(f"OCR failed, continuing without OCR: {e}")
-            #         ocr_text = ""
+            if TESSERACT_AVAILABLE and (image.size[0] * image.size[1] > 50000):  # Only for images > ~224x224
+                print("Running OCR preprocessing...")
+                try:
+                    ocr_text, ocr_confidence = extract_text_with_ocr(image)
+                    if ocr_text and len(ocr_text.strip()) > 50 and ocr_confidence > 30:
+                        print(f"OCR extracted {len(ocr_text)} characters with {ocr_confidence:.1f}% confidence")
+                    else:
+                        print(f"OCR extracted limited text ({len(ocr_text)} chars, {ocr_confidence:.1f}% confidence), will rely on vision model")
+                        ocr_text = ""  # Clear if not useful
+                except Exception as e:
+                    print(f"OCR failed, continuing without OCR: {e}")
+                    ocr_text = ""
+            else:
+                print("Skipping OCR (image too small or OCR unavailable)")
             
-            # Skip image enhancement to speed up processing - Gemini can handle original images
-            # Enhancement was causing delays and isn't necessary for most documents
-            print("Skipping image enhancement (using original image for faster processing)...")
-            # Uncomment below to enable enhancement if needed for difficult documents
-            # try:
-            #     image = enhance_image_for_vision(image)
-            # except Exception as e:
-            #     print(f"Image enhancement failed, using original: {e}")
+            # Enhance image for better vision processing (enabled for best processing)
+            print("Enhancing image for vision processing...")
+            try:
+                image = enhance_image_for_vision(image)
+            except Exception as e:
+                print(f"Image enhancement failed, using original: {e}")
+                # Continue with original image if enhancement fails
             
             print(f"Processed image: mode={image.mode}, size={image.size}")
         elif content_type == "application/pdf":
@@ -516,7 +516,8 @@ IMPORTANT: The following text was extracted from this document using OCR (confid
 
 Use this OCR text to help extract information, but also analyze the image visually to ensure accuracy and capture any information the OCR might have missed."""
         
-        prompt = f"""Extract travel information from this document. It could be a flight ticket, bus ticket, train ticket, hotel reservation, or other travel document.{ocr_context}
+        # Use regular string (not f-string) to avoid format specifier issues with JSON examples
+        prompt = """Extract travel information from this document. It could be a flight ticket, bus ticket, train ticket, hotel reservation, or other travel document.""" + ocr_context + """
 
 IMPORTANT: If this document is NOT in English, first translate all visible text to English in your mind, then extract the information from the English translation. All extracted information should be in English.
 
@@ -561,13 +562,13 @@ FOR HOTELS:
 - Price information if visible
 
 Return the information in this exact JSON format:
-{{
+{
     "title": "[Type] from [departure/origin] to [destination] (e.g., 'Bus from Allgäu Airport Memmingen to München Hbf' or 'Flight from Paris to London')",
     "start_date": "ISO 8601 datetime with EXACT travel date and time from document (YYYY-MM-DDTHH:MM:SS). Use TRAVEL date, NOT invoice date. Use EXACT time as shown - do NOT add or subtract hours for timezone.",
     "end_date": "ISO 8601 datetime with EXACT arrival/checkout date and time from document or null if single event. Use EXACT time as shown - do NOT add or subtract hours for timezone.",
     "location": "Destination/arrival location with full details as written in document (e.g., 'München Hbf, Seidlstraße 3a' or 'Memmingen Airport')",
     "description": "COMPREHENSIVE details including: Type (Flight/Bus/Train/Hotel), Ticket/Booking Number: [if visible], Company/Provider name, Full route (From [full departure] to [full destination]), Passenger: [name(s) with contact info if available], Passengers: [count if multiple], Price: [if visible], Trip ID/Order Number: [if visible], Invoice Date: [if visible], Important Notes: [all notes, instructions, special conditions]"
-}}
+}
 
 IMPORTANT EXTRACTION RULES:
 - If the document is NOT in English, translate all visible text to English first, then extract information from the English translation
