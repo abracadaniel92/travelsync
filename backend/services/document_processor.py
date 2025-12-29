@@ -561,13 +561,13 @@ FOR HOTELS:
 - Price information if visible
 
 Return the information in this exact JSON format:
-{
+{{
     "title": "[Type] from [departure/origin] to [destination] (e.g., 'Bus from Allgäu Airport Memmingen to München Hbf' or 'Flight from Paris to London')",
     "start_date": "ISO 8601 datetime with EXACT travel date and time from document (YYYY-MM-DDTHH:MM:SS). Use TRAVEL date, NOT invoice date. Use EXACT time as shown - do NOT add or subtract hours for timezone.",
     "end_date": "ISO 8601 datetime with EXACT arrival/checkout date and time from document or null if single event. Use EXACT time as shown - do NOT add or subtract hours for timezone.",
     "location": "Destination/arrival location with full details as written in document (e.g., 'München Hbf, Seidlstraße 3a' or 'Memmingen Airport')",
     "description": "COMPREHENSIVE details including: Type (Flight/Bus/Train/Hotel), Ticket/Booking Number: [if visible], Company/Provider name, Full route (From [full departure] to [full destination]), Passenger: [name(s) with contact info if available], Passengers: [count if multiple], Price: [if visible], Trip ID/Order Number: [if visible], Invoice Date: [if visible], Important Notes: [all notes, instructions, special conditions]"
-}
+}}
 
 IMPORTANT EXTRACTION RULES:
 - If the document is NOT in English, translate all visible text to English first, then extract information from the English translation
