@@ -13,6 +13,10 @@ function getEmailErrorMsg(data) {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
+    if (typeof authenticatedFetch === 'undefined') {
+        console.warn('email.js: authenticatedFetch not found - email buttons may not work. Ensure auth.js loads first.');
+    }
+
     // Check if email is configured and show hint (only when logged in)
     const emailCard = document.querySelector('.connection-card');
     const emailStatusEl = document.getElementById('emailStatus');
@@ -35,8 +39,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Update connection status on load
-    const emailStatus = localStorage.getItem('connection_email_status');
-    if (emailStatus) {
+    const storedEmailStatus = localStorage.getItem('connection_email_status');
+    if (storedEmailStatus) {
         const button = document.getElementById('testEmailBtn');
         if (button) {
             const existingDot = button.querySelector('.status-dot');
@@ -44,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 existingDot.remove();
             }
             const dot = document.createElement('span');
-            dot.className = `status-dot ${emailStatus}`;
+            dot.className = `status-dot ${storedEmailStatus}`;
             button.insertBefore(dot, button.firstChild);
         }
     }
@@ -56,6 +60,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Test email connection
     if (testEmailBtn) {
         testEmailBtn.addEventListener('click', async () => {
+            if (typeof authenticatedFetch === 'undefined') {
+                if (emailStatus) {
+                    emailStatus.style.display = 'block';
+                    emailStatus.className = 'connection-status error';
+                    emailStatus.innerHTML = '<strong>Error:</strong> Authentication not loaded. Please refresh the page.';
+                }
+                return;
+            }
             testEmailBtn.disabled = true;
             testEmailBtn.textContent = 'Testing...';
             emailStatus.style.display = 'none';
@@ -135,6 +147,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Check and process emails
     if (checkEmailBtn) {
         checkEmailBtn.addEventListener('click', async () => {
+            if (typeof authenticatedFetch === 'undefined') {
+                if (emailStatus) {
+                    emailStatus.style.display = 'block';
+                    emailStatus.className = 'connection-status error';
+                    emailStatus.innerHTML = '<strong>Error:</strong> Authentication not loaded. Please refresh the page.';
+                }
+                return;
+            }
             checkEmailBtn.disabled = true;
             checkEmailBtn.textContent = 'Checking...';
             emailStatus.style.display = 'none';
