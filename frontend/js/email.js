@@ -2,7 +2,38 @@
  * Email forwarding functionality
  */
 
-document.addEventListener('DOMContentLoaded', function() {
+// Extract error message from API response (FastAPI returns detail, we use error)
+function getEmailErrorMsg(data) {
+    if (data?.error) return data.error;
+    if (data?.detail) {
+        if (typeof data.detail === 'string') return data.detail;
+        if (Array.isArray(data.detail) && data.detail[0]?.msg) return data.detail[0].msg;
+    }
+    return 'Unknown error';
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Check if email is configured and show hint (only when logged in)
+    const emailCard = document.querySelector('.connection-card');
+    const emailStatusEl = document.getElementById('emailStatus');
+    if (emailCard && emailStatusEl && typeof authenticatedFetch !== 'undefined' && localStorage.getItem('auth_token')) {
+        try {
+            const statusRes = await authenticatedFetch(`${window.location.origin}/api/email/status`);
+            if (statusRes.ok) {
+                const status = await statusRes.json();
+                if (!status.configured && emailStatusEl) {
+                    emailStatusEl.style.display = 'block';
+                    emailStatusEl.className = 'connection-status';
+                    emailStatusEl.style.background = 'var(--color-bg)';
+                    emailStatusEl.style.border = '1px solid var(--color-border)';
+                    emailStatusEl.innerHTML = '<strong>Email not configured</strong><br>Set EMAIL_ADDRESS and EMAIL_PASSWORD in your .env file to enable email forwarding. See docs/EMAIL_SETUP.md for details.';
+                }
+            }
+        } catch (e) {
+            // Ignore - user may not be logged in yet
+        }
+    }
+
     // Update connection status on load
     const emailStatus = localStorage.getItem('connection_email_status');
     if (emailStatus) {
@@ -35,11 +66,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST'
                 });
                 
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
                 
                 emailStatus.style.display = 'block';
                 
-                if (data.success) {
+                if (response.ok && data.success) {
                     emailStatus.className = 'connection-status success';
                     emailStatus.innerHTML = `
                         <strong>✓ Email connection successful!</strong><br>
@@ -66,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 } else {
                     emailStatus.className = 'connection-status error';
-                    const errorMsg = data.error || 'Unknown error';
+                    const errorMsg = getEmailErrorMsg(data);
                     emailStatus.innerHTML = `<strong>✗ Connection failed:</strong><br>${errorMsg}`;
                     if (typeof showToast !== 'undefined') {
                         showToast('error', `Email connection failed: ${errorMsg}`);
@@ -96,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } finally {
                 testEmailBtn.disabled = false;
-                testEmailBtn.textContent = 'Test Email Connection';
+                testEmailBtn.textContent = 'Test Connection';
             }
         });
     }
@@ -114,11 +145,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST'
                 });
                 
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
                 
                 emailStatus.style.display = 'block';
                 
-                if (data.success) {
+                if (response.ok && data.success) {
                     emailStatus.className = 'connection-status success';
                     emailStatus.innerHTML = `
                         <strong>✓ ${data.message}</strong><br>
@@ -173,7 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 } else {
                     emailStatus.className = 'connection-status error';
-                    const errorMsg = data.error || data.detail || 'Unknown error';
+                    const errorMsg = getEmailErrorMsg(data);
                     emailStatus.innerHTML = `<strong>✗ Error:</strong><br>${errorMsg}`;
                     if (typeof showToast !== 'undefined') {
                         showToast('error', `Email processing failed: ${errorMsg}`);

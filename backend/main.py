@@ -454,6 +454,8 @@ async def check_emails(current_user: dict = Depends(get_current_user)):
                 "success": True,
                 "message": "No new emails with attachments found",
                 "emails_processed": 0,
+                "attachments_processed": 0,
+                "events_created": 0,
                 "results": []
             }
         
