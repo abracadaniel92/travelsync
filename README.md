@@ -172,20 +172,38 @@ TravelSync/
 │   │   ├── document_processor.py  # Gemini AI document processing
 │   │   └── email_service.py        # Email forwarding
 │   └── requirements.txt
-├── frontend/            # Static frontend
+├── frontend/            # Web frontend (HTML/CSS/JS)
 │   ├── index.html      # Main app page
+│   ├── landing.html    # Landing page
 │   ├── login.html      # Login page
 │   ├── css/
-│   │   └── style.css   # Travel-themed styling
-│   └── js/
-│       ├── auth.js     # Authentication
-│       ├── main.js     # Document upload
-│       ├── test.js     # API testing
-│       └── email.js    # Email features
-├── data/               # Runtime data (gitignored)
-│   ├── credentials.json
-│   └── token.pickle
-├── docker-compose.yml
+│   │   └── style.css   # Styling
+│   ├── js/
+│   │   ├── auth.js     # Authentication
+│   │   ├── main.js     # Document upload
+│   │   ├── test.js     # API testing
+│   │   └── email.js    # Email features
+│   └── images/         # Frontend assets
+├── mobile/              # React Native iOS app
+│   ├── src/
+│   │   ├── screens/    # Screen components
+│   │   ├── components/ # Reusable components
+│   │   ├── context/    # React context
+│   │   ├── services/   # API services
+│   │   └── assets/     # Mobile assets
+│   ├── App.js
+│   └── package.json
+├── docs/                # Documentation
+│   ├── SETUP.md
+│   ├── QUICK_START.md
+│   ├── TROUBLESHOOTING.md
+│   └── ... (all .md files)
+├── scripts/             # Utility scripts
+│   ├── start_server.ps1
+│   ├── quick_setup.sh
+│   ├── deploy_pi.sh
+│   └── ... (all scripts)
+├── docker-compose.yml   # Docker configuration
 ├── Dockerfile
 ├── env.template        # Environment variables template
 └── README.md

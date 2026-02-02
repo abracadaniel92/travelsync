@@ -62,7 +62,7 @@ def preprocess_image_for_ocr(image: Image.Image) -> Image.Image:
             
             # Denoise (use fast OpenCV method - skip slow scikit-image denoising)
             # scikit-image denoise_nl_means is VERY slow (can take 30+ seconds), so we skip it
-                gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
+            gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
             
             # Ensure gray is uint8 before CLAHE
             if gray.dtype != np.uint8:
@@ -70,8 +70,8 @@ def preprocess_image_for_ocr(image: Image.Image) -> Image.Image:
             
             # Enhance contrast using CLAHE (Contrast Limited Adaptive Histogram Equalization)
             try:
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            gray = clahe.apply(gray)
+                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                gray = clahe.apply(gray)
             except Exception as e:
                 # If CLAHE fails, use simpler contrast enhancement
                 gray = cv2.convertScaleAbs(gray, alpha=1.5, beta=10)
@@ -165,8 +165,8 @@ def enhance_image_for_vision(image: Image.Image) -> Image.Image:
             if l.dtype != np.uint8:
                 l = (np.clip(l, 0, 255)).astype(np.uint8)
             try:
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            l = clahe.apply(l)
+                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                l = clahe.apply(l)
             except Exception as e:
                 # If CLAHE fails, use simpler contrast enhancement
                 l = cv2.convertScaleAbs(l, alpha=1.3, beta=10)
@@ -177,7 +177,7 @@ def enhance_image_for_vision(image: Image.Image) -> Image.Image:
             
             # Denoise (use fast OpenCV method - skip slow scikit-image denoising)
             # scikit-image denoise_nl_means is VERY slow (can take 30+ seconds), so we skip it
-                img_array = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
+            img_array = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
             
             image = Image.fromarray(img_array)
         except Exception as e:
@@ -282,11 +282,11 @@ async def process_document(file_contents: bytes, content_type: str) -> Optional[
             if TESSERACT_AVAILABLE and (image.size[0] * image.size[1] > 50000):  # Only for images > ~224x224
                 print("Running OCR preprocessing...")
                 try:
-                ocr_text, ocr_confidence = extract_text_with_ocr(image)
-                if ocr_text and len(ocr_text.strip()) > 50 and ocr_confidence > 30:
-                    print(f"OCR extracted {len(ocr_text)} characters with {ocr_confidence:.1f}% confidence")
-                else:
-                    print(f"OCR extracted limited text ({len(ocr_text)} chars, {ocr_confidence:.1f}% confidence), will rely on vision model")
+                    ocr_text, ocr_confidence = extract_text_with_ocr(image)
+                    if ocr_text and len(ocr_text.strip()) > 50 and ocr_confidence > 30:
+                        print(f"OCR extracted {len(ocr_text)} characters with {ocr_confidence:.1f}% confidence")
+                    else:
+                        print(f"OCR extracted limited text ({len(ocr_text)} chars, {ocr_confidence:.1f}% confidence), will rely on vision model")
                         ocr_text = ""  # Clear if not useful
                 except Exception as e:
                     print(f"OCR failed, continuing without OCR: {e}")
@@ -297,7 +297,7 @@ async def process_document(file_contents: bytes, content_type: str) -> Optional[
             # Enhance image for better vision processing (enabled for best processing)
             print("Enhancing image for vision processing...")
             try:
-            image = enhance_image_for_vision(image)
+                image = enhance_image_for_vision(image)
             except Exception as e:
                 print(f"Image enhancement failed, using original: {e}")
                 # Continue with original image if enhancement fails

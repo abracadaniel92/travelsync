@@ -57,3 +57,18 @@ github_credential
 *_credential
 *credentials
 
+# Mobile/React Native
+mobile/node_modules/
+mobile/.expo/
+mobile/.expo-shared/
+mobile/dist/
+mobile/web-build/
+mobile/*.jks
+mobile/*.p8
+mobile/*.p12
+mobile/*.key
+mobile/*.mobileprovision
+mobile/*.orig.*
+
+# Metro bundler cache
+.metro-health-check*

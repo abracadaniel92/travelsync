@@ -6,9 +6,13 @@ import sqlite3
 import hashlib
 import os
 import sys
+from pathlib import Path
 
 # Database path (adjust if needed)
-db_path = os.getenv('DATABASE_PATH', 'documents_calendar.db')
+# Script runs from project root, so path is relative to root
+script_dir = Path(__file__).parent
+project_root = script_dir.parent
+db_path = os.getenv('DATABASE_PATH', str(project_root / 'documents_calendar.db'))
 
 # User credentials (set via environment variables or edit here)
 username = os.getenv('NEW_ADMIN_USERNAME', 'admin')

@@ -131,11 +131,19 @@ if frontend_path.exists():
 
 @app.get("/")
 async def root():
-    """Serve the main frontend page"""
+    """Serve the landing page"""
+    landing_page = frontend_path / "landing.html"
+    if landing_page.exists():
+        return FileResponse(str(landing_page))
+    return {"message": "TravelSync API"}
+
+@app.get("/app")
+async def app_page():
+    """Serve the main application page"""
     frontend_index = frontend_path / "index.html"
     if frontend_index.exists():
         return FileResponse(str(frontend_index))
-    return {"message": "TravelSync API"}
+    return {"message": "TravelSync App"}
 
 @app.get("/login")
 async def login_page():

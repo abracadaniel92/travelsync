@@ -21,8 +21,12 @@ function checkAuth() {
     
     const token = localStorage.getItem('auth_token');
     if (!token) {
-        // Only redirect if we're definitely NOT on login page
-        window.location.href = '/login';
+        // Redirect to login if not on login or landing page
+        const isLandingPage = pathname === '/' || pathname === '/landing';
+        const isLoginPage = pathname === '/login' || pathname.includes('login.html');
+        if (!isLandingPage && !isLoginPage) {
+            window.location.href = '/login';
+        }
         return false;
     }
     return true;
@@ -116,7 +120,7 @@ if (document.getElementById('loginForm')) {
         
         try {
             await login(username, password);
-            window.location.href = '/';
+            window.location.href = '/app';
         } catch (error) {
             errorMessage.textContent = error.message;
             errorMessage.style.display = 'block';
@@ -131,8 +135,8 @@ if (document.getElementById('logoutBtn')) {
     });
 }
 
-// Check auth on page load (except login page)
-// Only run checkAuth if we're NOT on the login page
+// Check auth on page load (except login and landing pages)
+// Only run checkAuth if we're NOT on the login or landing page
 (function() {
     // Get current pathname
     const pathname = window.location.pathname;
@@ -143,13 +147,18 @@ if (document.getElementById('logoutBtn')) {
                        pathname.includes('login.html') ||
                        pathname.includes('/login.html');
     
-    // NEVER run checkAuth on login page
-    if (isLoginPage) {
-        console.log('On login page, skipping auth check');
+    // Check if we're on landing page
+    const isLandingPage = pathname === '/' || 
+                         pathname === '/landing' ||
+                         pathname.includes('landing.html');
+    
+    // NEVER run checkAuth on login or landing page
+    if (isLoginPage || isLandingPage) {
+        console.log('On login or landing page, skipping auth check');
         return; // Exit early, don't run checkAuth
     }
     
-    // Only run checkAuth if NOT on login page
+    // Only run checkAuth if NOT on login or landing page (i.e., on /app)
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', checkAuth);
     } else {

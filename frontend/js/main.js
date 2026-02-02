@@ -7,6 +7,26 @@ let selectedFile = null;
 
 // Wait for DOM to be ready
 document.addEventListener('DOMContentLoaded', function() {
+    // Collapsible sections
+    const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+    collapsibleHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const content = document.getElementById(targetId);
+            const isActive = this.classList.contains('active');
+            
+            if (isActive) {
+                // Collapse
+                this.classList.remove('active');
+                content.style.display = 'none';
+            } else {
+                // Expand
+                this.classList.add('active');
+                content.style.display = 'block';
+            }
+        });
+    });
+    
     // DOM elements
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
@@ -197,13 +217,30 @@ function displayTravelInfo(info, travelInfo, resultsSection) {
 
 // Show status message
 function showStatus(type, message, uploadStatus) {
-    uploadStatus.className = `upload-status ${type}`;
+    // Support both new airportr style (status-message) and legacy (upload-status)
+    const isStatusMessage = uploadStatus.classList.contains('status-message') || 
+                           uploadStatus.id === 'uploadStatus' || 
+                           uploadStatus.id === 'emailStatus' ||
+                           uploadStatus.id === 'calendarTestResult' ||
+                           uploadStatus.id === 'geminiTestResult';
+    
+    if (isStatusMessage) {
+        uploadStatus.className = `status-message ${type}`;
+    } else {
+        uploadStatus.className = `upload-status ${type}`;
+    }
     uploadStatus.textContent = message;
     uploadStatus.style.display = 'block';
 }
 
 // Show calendar status
 function showCalendarStatus(type, message, calendarStatus) {
-    calendarStatus.className = `calendar-status ${type}`;
+    // Support both new airportr style and legacy
+    const isAirportr = calendarStatus.classList.contains('calendar-status-airportr');
+    if (isAirportr) {
+        calendarStatus.className = `calendar-status-airportr ${type}`;
+    } else {
+        calendarStatus.className = `calendar-status ${type}`;
+    }
     calendarStatus.textContent = message;
 }

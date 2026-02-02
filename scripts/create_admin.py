@@ -3,6 +3,12 @@ Script to create admin user with password test123
 """
 import os
 import sys
+from pathlib import Path
+
+# Add backend to path (scripts/ is sibling of backend/)
+script_dir = Path(__file__).parent
+project_root = script_dir.parent
+sys.path.insert(0, str(project_root))
 
 # Set environment variable
 os.environ['ADMIN_PASSWORD'] = 'test123'
@@ -10,8 +16,8 @@ os.environ['ADMIN_USERNAME'] = 'admin'
 
 # Try to use a workaround for bcrypt
 try:
-    from models import init_db, SessionLocal, User
-    from auth import get_password_hash, verify_password
+    from backend.models import init_db, SessionLocal, User
+    from backend.auth import get_password_hash, verify_password
     
     # Initialize database
     init_db()

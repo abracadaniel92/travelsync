@@ -4,8 +4,12 @@ Simple script to set admin password to test123
 import sqlite3
 import hashlib
 import os
+from pathlib import Path
 
-db_path = os.path.join(os.path.dirname(__file__), 'documents_calendar.db')
+# Script runs from scripts/ directory, so go up to project root
+script_dir = Path(__file__).parent
+project_root = script_dir.parent
+db_path = str(project_root / 'documents_calendar.db')
 
 # Create simple hash
 password = 'test123'

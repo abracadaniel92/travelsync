@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 (data.details && typeof data.details === 'string' && data.details.toLowerCase().includes('authentication'));
                 
                 if (!data.success && needsAuth) {
-                    resultDiv.className = 'upload-status error';
+                    resultDiv.className = 'status-message error';
                     resultDiv.innerHTML = `
                         <strong>⚠ Google Calendar authentication required</strong><br>
                         ${data.details ? `<small>${data.details}</small><br>` : ''}
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const completeData = await completeResponse.json();
                                 
                                 if (completeData.success) {
-                                    resultDiv.className = 'upload-status success';
+                                    resultDiv.className = 'status-message success';
                                     resultDiv.innerHTML = '<strong>✓ Authentication completed! Testing connection...</strong>';
                                     // Auto-test after successful auth
                                     setTimeout(() => testCalendarBtn.click(), 1000);
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 if (data.success) {
-                    resultDiv.className = 'upload-status success';
+                    resultDiv.className = 'status-message success';
                     resultDiv.innerHTML = `
                         <strong>✓ Google Calendar is connected!</strong><br>
                         Calendar: ${data.calendar_name || 'Primary'}<br>
@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         Total calendars: ${data.total_calendars || 0}
                     `;
                 } else {
-                    resultDiv.className = 'upload-status error';
+                    resultDiv.className = 'status-message error';
                     // Check again if this is an authentication error (fallback)
                     const errorText = (data.error || '') + ' ' + (data.details || '');
                     if (errorText.toLowerCase().includes('authentication') || errorText.toLowerCase().includes('auth/start')) {
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const completeData = await completeResponse.json();
                                     
                                     if (completeData.success) {
-                                        resultDiv.className = 'upload-status success';
+                                        resultDiv.className = 'status-message success';
                                         resultDiv.innerHTML = '<strong>✓ Authentication completed! Testing connection...</strong>';
                                         // Auto-test after successful auth
                                         setTimeout(() => testCalendarBtn.click(), 1000);
@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Calendar test error:', error);
                 resultDiv.style.display = 'block';
-                resultDiv.className = 'upload-status error';
+                resultDiv.className = 'status-message error';
                 
                 // Check if error message contains authentication-related text
                 const errorMsg = error.message || '';
@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const completeData = await completeResponse.json();
                                 
                                 if (completeData.success) {
-                                    resultDiv.className = 'upload-status success';
+                                    resultDiv.className = 'status-message success';
                                     resultDiv.innerHTML = '<strong>✓ Authentication completed! Please test the connection again.</strong>';
                                     // Auto-test after successful auth
                                     setTimeout(() => testCalendarBtn.click(), 1000);
@@ -354,13 +354,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultDiv.style.display = 'block';
                 
                 if (data.success) {
-                    resultDiv.className = 'upload-status success';
+                    resultDiv.className = 'status-message success';
                     resultDiv.innerHTML = `
                         <strong>✓ Gemini API is working!</strong><br>
                         Response: ${data.response}
                     `;
                 } else {
-                    resultDiv.className = 'upload-status error';
+                    resultDiv.className = 'status-message error';
                     resultDiv.innerHTML = `
                         <strong>✗ Error:</strong><br>
                         ${data.error || 'Unknown error'}
@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Test error:', error);
                 resultDiv.style.display = 'block';
-                resultDiv.className = 'upload-status error';
+                resultDiv.className = 'status-message error';
                 
                 if (error.message === 'Not authenticated') {
                     resultDiv.innerHTML = '<strong>Error:</strong> Not logged in. Please refresh and login again.';

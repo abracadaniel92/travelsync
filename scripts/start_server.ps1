@@ -1,7 +1,8 @@
 # Start Documents to Calendar Server
-# Change to script directory to ensure correct paths
+# Change to project root directory (parent of scripts folder)
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $scriptPath
+$projectRoot = Split-Path -Parent $scriptPath
+Set-Location $projectRoot
 
 $env:ADMIN_PASSWORD = "test123"
 $env:JWT_SECRET_KEY = "test-secret"
@@ -22,10 +23,10 @@ if (-not $env:EMAIL_ADDRESS) {
     Write-Host ""
 }
 
-Write-Host "Starting server on http://127.0.0.1:8000" -ForegroundColor Green
+Write-Host "Starting server on http://127.0.0.1:8001" -ForegroundColor Green
 Write-Host "Login: admin / test123" -ForegroundColor Yellow
 Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Gray
 Write-Host ""
 
-python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8001
 

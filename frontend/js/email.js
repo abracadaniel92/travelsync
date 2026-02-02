@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 emailStatus.style.display = 'block';
                 
                 if (data.success) {
-                    emailStatus.className = 'upload-status success';
+                    emailStatus.className = 'status-message success';
                     emailStatus.innerHTML = `
                         <strong>✓ Email connection successful!</strong><br>
                         Email: ${data.email_address}<br>
@@ -34,13 +34,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         Total emails in inbox: ${data.total_emails_in_inbox}
                     `;
                 } else {
-                    emailStatus.className = 'upload-status error';
+                    emailStatus.className = 'status-message error';
                     emailStatus.innerHTML = `<strong>✗ Connection failed:</strong><br>${data.error || 'Unknown error'}`;
                 }
             } catch (error) {
                 console.error('Email test error:', error);
                 emailStatus.style.display = 'block';
-                emailStatus.className = 'upload-status error';
+                emailStatus.className = 'status-message error';
                 
                 if (error.message === 'Not authenticated') {
                     emailStatus.innerHTML = '<strong>Error:</strong> Not logged in. Please refresh and login again.';
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 emailStatus.style.display = 'block';
                 
                 if (data.success) {
-                    emailStatus.className = 'upload-status success';
+                    emailStatus.className = 'status-message success';
                     emailStatus.innerHTML = `
                         <strong>✓ ${data.message}</strong><br>
                         Emails processed: ${data.emails_processed}<br>
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <strong>${statusIcon} ${result.subject || 'No Subject'}</strong><br>
                                         <small style="color: var(--color-text-secondary);">From: ${result.sender}</small>
                                     </div>
-                                    <span class="upload-status ${statusClass}" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">
+                                    <span class="status-message ${statusClass}" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">
                                         ${result.attachments_processed} processed
                                     </span>
                                 </div>
@@ -121,13 +121,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     }
                 } else {
-                    emailStatus.className = 'upload-status error';
+                    emailStatus.className = 'status-message error';
                     emailStatus.innerHTML = `<strong>✗ Error:</strong><br>${data.error || data.detail || 'Unknown error'}`;
                 }
             } catch (error) {
                 console.error('Email check error:', error);
                 emailStatus.style.display = 'block';
-                emailStatus.className = 'upload-status error';
+                emailStatus.className = 'status-message error';
                 
                 if (error.message === 'Not authenticated') {
                     emailStatus.innerHTML = '<strong>Error:</strong> Not logged in. Please refresh and login again.';
