@@ -2,24 +2,6 @@
  * Email forwarding functionality
  */
 
-// Connection test timeout (ms) - prevents indefinite hanging
-const CONNECTION_TEST_TIMEOUT = 30000;
-
-// Fetch with timeout to prevent indefinite hanging
-async function fetchWithTimeout(url, options = {}) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), CONNECTION_TEST_TIMEOUT);
-    try {
-        const response = await authenticatedFetch(url, {
-            ...options,
-            signal: controller.signal
-        });
-        return response;
-    } finally {
-        clearTimeout(timeoutId);
-    }
-}
-
 // Extract error message from API response (FastAPI returns detail, we use error)
 function getEmailErrorMsg(data) {
     if (data?.error) return data.error;
@@ -30,37 +12,9 @@ function getEmailErrorMsg(data) {
     return 'Unknown error';
 }
 
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', function() {
     if (typeof authenticatedFetch === 'undefined') {
         console.warn('email.js: authenticatedFetch not found - email buttons may not work. Ensure auth.js loads first.');
-    }
-
-    // Check if email is configured and show hint (only when logged in)
-    const emailCard = document.querySelector('.connection-card');
-    const emailStatusEl = document.getElementById('emailStatus');
-    if (emailCard && emailStatusEl && typeof authenticatedFetch !== 'undefined' && localStorage.getItem('auth_token')) {
-        let statusTimeoutId;
-        try {
-            const controller = new AbortController();
-            statusTimeoutId = setTimeout(() => controller.abort(), 8000);
-            const statusRes = await authenticatedFetch(`${window.location.origin}/api/email/status`, {
-                signal: controller.signal
-            });
-            clearTimeout(statusTimeoutId);
-            if (statusRes.ok) {
-                const status = await statusRes.json();
-                if (!status.configured && emailStatusEl) {
-                    emailStatusEl.style.display = 'block';
-                    emailStatusEl.className = 'connection-status';
-                    emailStatusEl.style.background = 'var(--color-bg)';
-                    emailStatusEl.style.border = '1px solid var(--color-border)';
-                    emailStatusEl.innerHTML = '<strong>Email not configured</strong><br>Set EMAIL_ADDRESS and EMAIL_PASSWORD in your .env file to enable email forwarding. See docs/EMAIL_SETUP.md for details.';
-                }
-            }
-        } catch (e) {
-            if (statusTimeoutId) clearTimeout(statusTimeoutId);
-            // Ignore - user may not be logged in yet or request timed out
-        }
     }
 
     // Update connection status on load
@@ -69,22 +23,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         const button = document.getElementById('testEmailBtn');
         if (button) {
             const existingDot = button.querySelector('.status-dot');
-            if (existingDot) {
-                existingDot.remove();
-            }
+            if (existingDot) existingDot.remove();
             const dot = document.createElement('span');
             dot.className = `status-dot ${storedEmailStatus}`;
             button.insertBefore(dot, button.firstChild);
         }
     }
-    const testEmailBtn = document.getElementById('testEmailBtn');
-    const checkEmailBtn = document.getElementById('checkEmailBtn');
-    const emailStatus = document.getElementById('emailStatus');
-    const emailResults = document.getElementById('emailResults');
-    
-    // Test email connection
-    if (testEmailBtn) {
-        testEmailBtn.addEventListener('click', async () => {
+
+    // Use event delegation - attach to document so it works even if modal loads dynamically
+    document.addEventListener('click', async function(e) {
+        const testEmailBtn = e.target.closest('#testEmailBtn');
+        const checkEmailBtn = e.target.closest('#checkEmailBtn');
+        
+        if (testEmailBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const emailStatus = document.getElementById('emailStatus');
+            const emailResults = document.getElementById('emailResults');
             if (typeof authenticatedFetch === 'undefined') {
                 if (emailStatus) {
                     emailStatus.style.display = 'block';
@@ -95,19 +50,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             testEmailBtn.disabled = true;
             testEmailBtn.textContent = 'Testing...';
-            emailStatus.style.display = 'none';
-            emailResults.style.display = 'none';
+            if (emailStatus) emailStatus.style.display = 'none';
+            if (emailResults) emailResults.style.display = 'none';
             
             try {
-                const response = await fetchWithTimeout(`${window.location.origin}/api/email/test`, {
+                const response = await authenticatedFetch(`${window.location.origin}/api/email/test`, {
                     method: 'POST'
                 });
                 
                 const data = await response.json().catch(() => ({}));
                 
-                emailStatus.style.display = 'block';
+                if (emailStatus) emailStatus.style.display = 'block';
                 
                 if (response.ok && data.success) {
+                    if (emailStatus) {
                     emailStatus.className = 'connection-status success';
                     emailStatus.innerHTML = `
                         <strong>✓ Email connection successful!</strong><br>
@@ -132,7 +88,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                         dot.className = 'status-dot connected';
                         button.insertBefore(dot, button.firstChild);
                     }
+                    }
                 } else {
+                    if (emailStatus) {
                     emailStatus.className = 'connection-status error';
                     const errorMsg = getEmailErrorMsg(data);
                     emailStatus.innerHTML = `<strong>✗ Connection failed:</strong><br>${errorMsg}`;
@@ -151,29 +109,32 @@ document.addEventListener('DOMContentLoaded', async function() {
                         dot.className = 'status-dot error';
                         button.insertBefore(dot, button.firstChild);
                     }
+                    }
                 }
             } catch (error) {
                 console.error('Email test error:', error);
+                if (emailStatus) {
                 emailStatus.style.display = 'block';
                 emailStatus.className = 'connection-status error';
                 
-                if (error.name === 'AbortError') {
-                    emailStatus.innerHTML = '<strong>Error:</strong> Request timed out. The server may be slow or unreachable.';
-                } else if (error.message === 'Not authenticated' || error.message?.includes('Session expired')) {
+                if (error.message === 'Not authenticated' || error.message?.includes('Session expired')) {
                     emailStatus.innerHTML = '<strong>Error:</strong> Session expired. Please log in again.';
                 } else {
                     emailStatus.innerHTML = `<strong>Error:</strong> ${error.message || 'Connection failed'}`;
+                }
                 }
             } finally {
                 testEmailBtn.disabled = false;
                 testEmailBtn.textContent = 'Test Connection';
             }
-        });
-    }
-    
-    // Check and process emails
-    if (checkEmailBtn) {
-        checkEmailBtn.addEventListener('click', async () => {
+            return;
+        }
+        
+        if (checkEmailBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const emailStatus = document.getElementById('emailStatus');
+            const emailResults = document.getElementById('emailResults');
             if (typeof authenticatedFetch === 'undefined') {
                 if (emailStatus) {
                     emailStatus.style.display = 'block';
@@ -184,19 +145,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             checkEmailBtn.disabled = true;
             checkEmailBtn.textContent = 'Checking...';
-            emailStatus.style.display = 'none';
-            emailResults.style.display = 'none';
+            if (emailStatus) emailStatus.style.display = 'none';
+            if (emailResults) emailResults.style.display = 'none';
             
             try {
-                const response = await fetchWithTimeout(`${window.location.origin}/api/email/check`, {
+                const response = await authenticatedFetch(`${window.location.origin}/api/email/check`, {
                     method: 'POST'
                 });
                 
                 const data = await response.json().catch(() => ({}));
                 
-                emailStatus.style.display = 'block';
+                if (emailStatus) emailStatus.style.display = 'block';
                 
                 if (response.ok && data.success) {
+                    if (emailStatus) {
                     emailStatus.className = 'connection-status success';
                     emailStatus.innerHTML = `
                         <strong>✓ ${data.message}</strong><br>
@@ -210,7 +172,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                     
                     // Show detailed results if available
-                    if (data.results && data.results.length > 0) {
+                    if (data.results && data.results.length > 0 && emailResults) {
                         emailResults.style.display = 'block';
                         emailResults.innerHTML = '<h3 style="margin-top: 1rem; font-size: 1rem;">Processing Details:</h3>';
                         
@@ -249,32 +211,35 @@ document.addEventListener('DOMContentLoaded', async function() {
                             emailResults.appendChild(resultDiv);
                         });
                     }
+                    }
                 } else {
+                    if (emailStatus) {
                     emailStatus.className = 'connection-status error';
                     const errorMsg = getEmailErrorMsg(data);
                     emailStatus.innerHTML = `<strong>✗ Error:</strong><br>${errorMsg}`;
                     if (typeof showToast !== 'undefined') {
                         showToast('error', `Email processing failed: ${errorMsg}`);
                     }
+                    }
                 }
             } catch (error) {
                 console.error('Email check error:', error);
+                if (emailStatus) {
                 emailStatus.style.display = 'block';
                 emailStatus.className = 'connection-status error';
                 
-                if (error.name === 'AbortError') {
-                    emailStatus.innerHTML = '<strong>Error:</strong> Request timed out. The server may be slow or unreachable.';
-                } else if (error.message === 'Not authenticated' || error.message?.includes('Session expired')) {
+                if (error.message === 'Not authenticated' || error.message?.includes('Session expired')) {
                     emailStatus.innerHTML = '<strong>Error:</strong> Session expired. Please log in again.';
                 } else {
                     emailStatus.innerHTML = `<strong>Error:</strong> ${error.message || 'Connection failed'}`;
+                }
                 }
             } finally {
                 checkEmailBtn.disabled = false;
                 checkEmailBtn.textContent = 'Check & Process Emails';
             }
-        });
-    }
+        }
+    });
 });
 
 
