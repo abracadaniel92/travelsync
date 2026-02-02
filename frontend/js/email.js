@@ -3,6 +3,20 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Update connection status on load
+    const emailStatus = localStorage.getItem('connection_email_status');
+    if (emailStatus) {
+        const button = document.getElementById('testEmailBtn');
+        if (button) {
+            const existingDot = button.querySelector('.status-dot');
+            if (existingDot) {
+                existingDot.remove();
+            }
+            const dot = document.createElement('span');
+            dot.className = `status-dot ${emailStatus}`;
+            button.insertBefore(dot, button.firstChild);
+        }
+    }
     const testEmailBtn = document.getElementById('testEmailBtn');
     const checkEmailBtn = document.getElementById('checkEmailBtn');
     const emailStatus = document.getElementById('emailStatus');
@@ -26,21 +40,54 @@ document.addEventListener('DOMContentLoaded', function() {
                 emailStatus.style.display = 'block';
                 
                 if (data.success) {
-                    emailStatus.className = 'status-message success';
+                    emailStatus.className = 'connection-status success';
                     emailStatus.innerHTML = `
                         <strong>✓ Email connection successful!</strong><br>
                         Email: ${data.email_address}<br>
                         Server: ${data.imap_server}<br>
                         Total emails in inbox: ${data.total_emails_in_inbox}
+                        <div class="connection-timestamp">Last checked: ${new Date().toLocaleTimeString()}</div>
                     `;
+                    if (typeof showToast !== 'undefined') {
+                        showToast('success', 'Email connection successful!');
+                    }
+                    localStorage.setItem('connection_email_status', 'connected');
+                    localStorage.setItem('connection_email_timestamp', new Date().toLocaleTimeString());
+                    // Update status dot
+                    const button = document.getElementById('testEmailBtn');
+                    if (button) {
+                        const existingDot = button.querySelector('.status-dot');
+                        if (existingDot) {
+                            existingDot.remove();
+                        }
+                        const dot = document.createElement('span');
+                        dot.className = 'status-dot connected';
+                        button.insertBefore(dot, button.firstChild);
+                    }
                 } else {
-                    emailStatus.className = 'status-message error';
-                    emailStatus.innerHTML = `<strong>✗ Connection failed:</strong><br>${data.error || 'Unknown error'}`;
+                    emailStatus.className = 'connection-status error';
+                    const errorMsg = data.error || 'Unknown error';
+                    emailStatus.innerHTML = `<strong>✗ Connection failed:</strong><br>${errorMsg}`;
+                    if (typeof showToast !== 'undefined') {
+                        showToast('error', `Email connection failed: ${errorMsg}`);
+                    }
+                    localStorage.setItem('connection_email_status', 'error');
+                    // Update status dot
+                    const button = document.getElementById('testEmailBtn');
+                    if (button) {
+                        const existingDot = button.querySelector('.status-dot');
+                        if (existingDot) {
+                            existingDot.remove();
+                        }
+                        const dot = document.createElement('span');
+                        dot.className = 'status-dot error';
+                        button.insertBefore(dot, button.firstChild);
+                    }
                 }
             } catch (error) {
                 console.error('Email test error:', error);
                 emailStatus.style.display = 'block';
-                emailStatus.className = 'status-message error';
+                emailStatus.className = 'connection-status error';
                 
                 if (error.message === 'Not authenticated') {
                     emailStatus.innerHTML = '<strong>Error:</strong> Not logged in. Please refresh and login again.';
@@ -72,13 +119,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 emailStatus.style.display = 'block';
                 
                 if (data.success) {
-                    emailStatus.className = 'status-message success';
+                    emailStatus.className = 'connection-status success';
                     emailStatus.innerHTML = `
                         <strong>✓ ${data.message}</strong><br>
                         Emails processed: ${data.emails_processed}<br>
                         Attachments processed: ${data.attachments_processed}<br>
                         Calendar events created: ${data.events_created}
+                        <div class="connection-timestamp">Last checked: ${new Date().toLocaleTimeString()}</div>
                     `;
+                    if (typeof showToast !== 'undefined') {
+                        showToast('success', `${data.message} - ${data.events_created} event(s) created`);
+                    }
                     
                     // Show detailed results if available
                     if (data.results && data.results.length > 0) {
@@ -98,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <strong>${statusIcon} ${result.subject || 'No Subject'}</strong><br>
                                         <small style="color: var(--color-text-secondary);">From: ${result.sender}</small>
                                     </div>
-                                    <span class="status-message ${statusClass}" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">
+                                    <span class="connection-status ${statusClass}" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">
                                         ${result.attachments_processed} processed
                                     </span>
                                 </div>
@@ -121,13 +172,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     }
                 } else {
-                    emailStatus.className = 'status-message error';
-                    emailStatus.innerHTML = `<strong>✗ Error:</strong><br>${data.error || data.detail || 'Unknown error'}`;
+                    emailStatus.className = 'connection-status error';
+                    const errorMsg = data.error || data.detail || 'Unknown error';
+                    emailStatus.innerHTML = `<strong>✗ Error:</strong><br>${errorMsg}`;
+                    if (typeof showToast !== 'undefined') {
+                        showToast('error', `Email processing failed: ${errorMsg}`);
+                    }
                 }
             } catch (error) {
                 console.error('Email check error:', error);
                 emailStatus.style.display = 'block';
-                emailStatus.className = 'status-message error';
+                emailStatus.className = 'connection-status error';
                 
                 if (error.message === 'Not authenticated') {
                     emailStatus.innerHTML = '<strong>Error:</strong> Not logged in. Please refresh and login again.';

@@ -2,8 +2,63 @@
  * Test functionality
  */
 
+// Connection status tracking
+const connectionStatus = {
+    email: null,
+    calendar: null,
+    gemini: null
+};
+
+// Update connection status indicator
+function updateConnectionStatus(type, status) {
+    connectionStatus[type] = status;
+    const timestamp = new Date().toLocaleTimeString();
+    localStorage.setItem(`connection_${type}_status`, status);
+    localStorage.setItem(`connection_${type}_timestamp`, timestamp);
+    
+    // Update status dot in button if exists
+    const button = document.getElementById(`test${type.charAt(0).toUpperCase() + type.slice(1)}Btn`);
+    if (button) {
+        const existingDot = button.querySelector('.status-dot');
+        if (existingDot) {
+            existingDot.remove();
+        }
+        const dot = document.createElement('span');
+        dot.className = `status-dot ${status}`;
+        button.insertBefore(dot, button.firstChild);
+    }
+}
+
+// Get connection status
+function getConnectionStatus(type) {
+    return localStorage.getItem(`connection_${type}_status`) || null;
+}
+
+// Get connection timestamp
+function getConnectionTimestamp(type) {
+    return localStorage.getItem(`connection_${type}_timestamp`) || null;
+}
+
 // Wait for DOM to be ready
 document.addEventListener('DOMContentLoaded', function() {
+    // Load and display connection status on page load
+    ['email', 'calendar', 'gemini'].forEach(type => {
+        const status = getConnectionStatus(type);
+        if (status) {
+            const buttonId = `test${type.charAt(0).toUpperCase() + type.slice(1)}Btn`;
+            const button = document.getElementById(buttonId);
+            if (button) {
+                const existingDot = button.querySelector('.status-dot');
+                if (existingDot) {
+                    existingDot.remove();
+                }
+                const dot = document.createElement('span');
+                dot.className = `status-dot ${status}`;
+                button.insertBefore(dot, button.firstChild);
+            }
+        }
+    });
+    
     // Test Calendar button
     const testCalendarBtn = document.getElementById('testCalendarBtn');
     if (testCalendarBtn) {
@@ -40,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 (data.details && typeof data.details === 'string' && data.details.toLowerCase().includes('authentication'));
                 
                 if (!data.success && needsAuth) {
-                    resultDiv.className = 'status-message error';
+                    resultDiv.className = 'connection-status error';
                     resultDiv.innerHTML = `
                         <strong>⚠ Google Calendar authentication required</strong><br>
                         ${data.details ? `<small>${data.details}</small><br>` : ''}
@@ -108,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const completeData = await completeResponse.json();
                                 
                                 if (completeData.success) {
-                                    resultDiv.className = 'status-message success';
+                                    resultDiv.className = 'connection-status success';
                                     resultDiv.innerHTML = '<strong>✓ Authentication completed! Testing connection...</strong>';
                                     // Auto-test after successful auth
                                     setTimeout(() => testCalendarBtn.click(), 1000);
@@ -128,15 +183,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 if (data.success) {
-                    resultDiv.className = 'status-message success';
+                    resultDiv.className = 'connection-status success';
                     resultDiv.innerHTML = `
                         <strong>✓ Google Calendar is connected!</strong><br>
                         Calendar: ${data.calendar_name || 'Primary'}<br>
                         Timezone: ${data.timezone || 'Unknown'}<br>
                         Total calendars: ${data.total_calendars || 0}
                     `;
+                    if (typeof showToast !== 'undefined') {
+                        showToast('success', 'Google Calendar connection successful!');
+                    }
+                    // Update connection status
+                    updateConnectionStatus('calendar', 'connected');
                 } else {
-                    resultDiv.className = 'status-message error';
+                    resultDiv.className = 'connection-status error';
                     // Check again if this is an authentication error (fallback)
                     const errorText = (data.error || '') + ' ' + (data.details || '');
                     if (errorText.toLowerCase().includes('authentication') || errorText.toLowerCase().includes('auth/start')) {
@@ -208,7 +268,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const completeData = await completeResponse.json();
                                     
                                     if (completeData.success) {
-                                        resultDiv.className = 'status-message success';
+                                        resultDiv.className = 'connection-status success';
                                         resultDiv.innerHTML = '<strong>✓ Authentication completed! Testing connection...</strong>';
                                         // Auto-test after successful auth
                                         setTimeout(() => testCalendarBtn.click(), 1000);
@@ -235,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Calendar test error:', error);
                 resultDiv.style.display = 'block';
-                resultDiv.className = 'status-message error';
+                resultDiv.className = 'connection-status error';
                 
                 // Check if error message contains authentication-related text
                 const errorMsg = error.message || '';
@@ -297,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const completeData = await completeResponse.json();
                                 
                                 if (completeData.success) {
-                                    resultDiv.className = 'status-message success';
+                                    resultDiv.className = 'connection-status success';
                                     resultDiv.innerHTML = '<strong>✓ Authentication completed! Please test the connection again.</strong>';
                                     // Auto-test after successful auth
                                     setTimeout(() => testCalendarBtn.click(), 1000);
@@ -314,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Test Calendar Connection';
+                btn.textContent = 'Test Connection';
             }
         });
     }
@@ -354,31 +414,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultDiv.style.display = 'block';
                 
                 if (data.success) {
-                    resultDiv.className = 'status-message success';
+                    resultDiv.className = 'connection-status success';
                     resultDiv.innerHTML = `
                         <strong>✓ Gemini API is working!</strong><br>
                         Response: ${data.response}
                     `;
+                    if (typeof showToast !== 'undefined') {
+                        showToast('success', 'Gemini API connection successful!');
+                    }
+                    // Update connection status
+                    updateConnectionStatus('gemini', 'connected');
                 } else {
-                    resultDiv.className = 'status-message error';
+                    resultDiv.className = 'connection-status error';
+                    const errorMsg = data.error || 'Unknown error';
                     resultDiv.innerHTML = `
                         <strong>✗ Error:</strong><br>
-                        ${data.error || 'Unknown error'}
+                        ${errorMsg}
                     `;
+                    if (typeof showToast !== 'undefined') {
+                        showToast('error', `Gemini API test failed: ${errorMsg}`);
+                    }
+                    updateConnectionStatus('gemini', 'error');
                 }
             } catch (error) {
                 console.error('Test error:', error);
                 resultDiv.style.display = 'block';
-                resultDiv.className = 'status-message error';
+                resultDiv.className = 'connection-status error';
                 
                 if (error.message === 'Not authenticated') {
                     resultDiv.innerHTML = '<strong>Error:</strong> Not logged in. Please refresh and login again.';
+                    if (typeof showToast !== 'undefined') {
+                        showToast('error', 'Authentication required. Please sign in again.');
+                    }
                 } else {
-                    resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                    const errorMsg = error.message || 'An error occurred while testing the connection.';
+                    resultDiv.innerHTML = `<strong>Error:</strong> ${errorMsg}`;
+                    if (typeof showToast !== 'undefined') {
+                        showToast('error', `Connection test failed: ${errorMsg}`);
+                    }
+                    updateConnectionStatus('gemini', 'error');
                 }
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Test Gemini Connection';
+                btn.textContent = 'Test Connection';
             }
         });
     } else {

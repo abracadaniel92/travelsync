@@ -6,7 +6,7 @@
     <title>TravelSync</title>
     <link rel="icon" type="image/png" href="/static/images/logo2.png">
     <link rel="apple-touch-icon" href="/static/images/logo2.png">
-    <link rel="stylesheet" href="/static/css/style.css?v=8">
+    <link rel="stylesheet" href="/static/css/style.css?v=13">
 </head>
 <body class="airportr-theme">
     <div class="app-container">
@@ -68,62 +68,130 @@
                     <div class="card-header">
                         <h2>Extracted Information</h2>
                     </div>
-                    <div id="travelInfo" class="travel-info-airportr"></div>
+                    <div id="travelInfo" class="travel-info-airportr">
+                        <div class="empty-state" id="emptyResultsState" style="display: none;">
+                            <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            <div class="empty-state-title">No information extracted</div>
+                            <div class="empty-state-description">The document was processed but no travel information could be extracted. Please ensure your document contains clear travel details.</div>
+                        </div>
+                    </div>
                     <div id="calendarStatus" class="calendar-status-airportr"></div>
                 </section>
                 
-                <section class="card-airportr email-section">
-                    <div class="card-header collapsible-header" data-target="emailContent">
-                        <h2>Email Forwarding</h2>
-                        <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="6 9 12 15 18 9"></polyline>
+                <section class="card-airportr connections-section">
+                    <button id="openConnectionsBtn" class="btn-connections-trigger">
+                        <svg class="connections-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
                         </svg>
-                    </div>
-                    <div class="collapsible-content" id="emailContent" style="display: none;">
-                        <p class="card-description">Forward emails with travel documents to automatically process them. Configure email in your environment variables.</p>
-                        <div class="section-actions-airportr">
-                            <button id="testEmailBtn" class="btn-gradient">Test Email Connection</button>
-                            <button id="checkEmailBtn" class="btn-gradient">Check & Process Emails</button>
-                        </div>
-                        <div id="emailStatus" class="status-message" style="margin-top: 1rem; display: none;"></div>
-                        <div id="emailResults" style="margin-top: 1rem; display: none;"></div>
-                    </div>
-                </section>
-                
-                <section class="card-airportr calendar-section">
-                    <div class="card-header collapsible-header" data-target="calendarContent">
-                        <h2>Google Calendar</h2>
-                        <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </div>
-                    <div class="collapsible-content" id="calendarContent" style="display: none;">
-                        <p class="card-description">Test your Google Calendar connection. Make sure credentials.json is configured.</p>
-                        <button id="testCalendarBtn" class="btn-secondary-airportr">Test Calendar Connection</button>
-                        <div id="calendarTestResult" class="status-message" style="margin-top: 1rem; display: none;"></div>
-                    </div>
-                </section>
-                
-                <section class="card-airportr test-section">
-                    <div class="card-header collapsible-header" data-target="geminiContent">
-                        <h2>Test Gemini API</h2>
-                        <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </div>
-                    <div class="collapsible-content" id="geminiContent" style="display: none;">
-                        <p class="card-description">Verify the Gemini AI connection for document processing.</p>
-                        <button id="testGeminiBtn" class="btn-secondary-airportr">Test Gemini Connection</button>
-                        <div id="geminiTestResult" class="status-message" style="margin-top: 1rem; display: none;"></div>
-                    </div>
+                        <span>Test Connections</span>
+                    </button>
                 </section>
             </div>
         </main>
     </div>
     
+    <!-- Bottom Sheet Modal -->
+    <div id="connectionsModal" class="bottom-sheet-modal">
+        <div class="bottom-sheet-overlay"></div>
+        <div class="bottom-sheet-content">
+            <div class="bottom-sheet-handle"></div>
+            <div class="bottom-sheet-header">
+                <h2>Test Connections</h2>
+                <button id="closeConnectionsBtn" class="btn-close-modal" aria-label="Close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="bottom-sheet-body">
+                <!-- Email Connection Card -->
+                <div class="connection-card">
+                    <div class="connection-card-content">
+                        <div class="connection-icon-wrapper">
+                            <svg class="connection-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                        </div>
+                        <div class="connection-info">
+                            <h3>Email Forwarding</h3>
+                            <p>Forward emails with travel documents to automatically process them.</p>
+                        </div>
+                    </div>
+                    <div class="connection-actions">
+                        <button id="testEmailBtn" class="btn-connection-test">Test Connection</button>
+                        <button id="checkEmailBtn" class="btn-connection-test">Check & Process</button>
+                    </div>
+                    <div id="emailStatus" class="connection-status" style="display: none;"></div>
+                    <div id="emailResults" class="connection-results" style="display: none;"></div>
+                </div>
+                
+                <!-- Calendar Connection Card -->
+                <div class="connection-card">
+                    <div class="connection-card-content">
+                        <div class="connection-icon-wrapper">
+                            <svg class="connection-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                        </div>
+                        <div class="connection-info">
+                            <h3>Google Calendar</h3>
+                            <p>Test your Google Calendar connection. Make sure credentials.json is configured.</p>
+                        </div>
+                    </div>
+                    <div class="connection-actions">
+                        <button id="testCalendarBtn" class="btn-connection-test">Test Connection</button>
+                    </div>
+                    <div id="calendarTestResult" class="connection-status" style="display: none;"></div>
+                </div>
+                
+                <!-- Gemini Connection Card -->
+                <div class="connection-card">
+                    <div class="connection-card-content">
+                        <div class="connection-icon-wrapper">
+                            <svg class="connection-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                <path d="M2 17l10 5 10-5"></path>
+                                <path d="M2 12l10 5 10-5"></path>
+                            </svg>
+                        </div>
+                        <div class="connection-info">
+                            <h3>Gemini API</h3>
+                            <p>Verify the Gemini AI connection for document processing.</p>
+                        </div>
+                    </div>
+                    <div class="connection-actions">
+                        <button id="testGeminiBtn" class="btn-connection-test">Test Connection</button>
+                    </div>
+                    <div id="geminiTestResult" class="connection-status" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+    
     <script src="/static/js/auth.js"></script>
-    <script src="/static/js/main.js?v=4"></script>
-    <script src="/static/js/test.js?v=3"></script>
-    <script src="/static/js/email.js?v=1"></script>
+    <script src="/static/js/toast.js"></script>
+    <script src="/static/js/main.js?v=5"></script>
+    <script src="/static/js/test.js?v=4"></script>
+    <script src="/static/js/email.js?v=2"></script>
 </body>
 </html>
