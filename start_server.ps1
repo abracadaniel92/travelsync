@@ -1,4 +1,8 @@
 # Start Documents to Calendar Server
+# Change to script directory to ensure correct paths
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $scriptPath
+
 $env:ADMIN_PASSWORD = "test123"
 $env:JWT_SECRET_KEY = "test-secret"
 

@@ -154,3 +154,12 @@ else
     echo "   docker-compose logs"
 fi
 
+
+
+
+
+
+
+
+
+
