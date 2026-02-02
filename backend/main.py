@@ -129,6 +129,11 @@ frontend_path = Path(__file__).parent.parent / "frontend"
 if frontend_path.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_path)), name="static")
 
+# Serve screenshots
+screenshots_path = Path(__file__).parent.parent / "screenshots"
+if screenshots_path.exists():
+    app.mount("/static/screenshots", StaticFiles(directory=str(screenshots_path)), name="screenshots")
+
 @app.get("/")
 async def root():
     """Serve the landing page"""
