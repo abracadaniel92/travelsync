@@ -2,6 +2,20 @@
  * Test functionality
  */
 
+// Timeout to prevent connection tests from hanging (ms)
+const CONNECTION_TEST_TIMEOUT = 30000;
+
+// Fetch with timeout for connection tests
+async function fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CONNECTION_TEST_TIMEOUT);
+    try {
+        return await authenticatedFetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 // Connection status tracking
 const connectionStatus = {
     email: null,
@@ -75,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error('authenticatedFetch function not found. Make sure auth.js is loaded.');
                 }
                 
-                const response = await authenticatedFetch(`${window.location.origin}/api/calendar/test`);
+                const response = await fetchWithTimeout(`${window.location.origin}/api/calendar/test`);
                 
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -297,15 +311,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultDiv.style.display = 'block';
                 resultDiv.className = 'connection-status error';
                 
-                // Check if error message contains authentication-related text
+                if (error.name === 'AbortError') {
+                    resultDiv.innerHTML = '<strong>Error:</strong> Request timed out. The server may be slow or unreachable.';
+                } else if (error.message === 'Not authenticated' || error.message?.includes('Session expired')) {
+                    resultDiv.innerHTML = '<strong>Error:</strong> Session expired. Please log in again.';
+                } else {
                 const errorMsg = error.message || '';
                 const isAuthError = errorMsg.toLowerCase().includes('authentication') || 
                                   errorMsg.toLowerCase().includes('auth/start') ||
                                   errorMsg.toLowerCase().includes('token.pickle');
                 
-                if (error.message === 'Not authenticated') {
-                    resultDiv.innerHTML = '<strong>Error:</strong> Not logged in. Please refresh and login again.';
-                } else if (isAuthError) {
+                if (isAuthError) {
                     // Show OAuth authentication option
                     resultDiv.innerHTML = `
                         <strong>⚠ Google Calendar authentication required</strong><br>
@@ -370,8 +386,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     }
                 } else {
-                    resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                    resultDiv.innerHTML = `<strong>Error:</strong> ${error.message || 'Connection failed'}`;
                 }
+            }
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Test Connection';
@@ -400,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error('authenticatedFetch function not found. Make sure auth.js is loaded.');
                 }
                 
-                const response = await authenticatedFetch(`${window.location.origin}/api/test/gemini`);
+                const response = await fetchWithTimeout(`${window.location.origin}/api/test/gemini`);
                 console.log('Response received:', response.status);
                 
                 if (!response.ok) {
@@ -441,8 +458,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultDiv.style.display = 'block';
                 resultDiv.className = 'connection-status error';
                 
-                if (error.message === 'Not authenticated') {
-                    resultDiv.innerHTML = '<strong>Error:</strong> Not logged in. Please refresh and login again.';
+                if (error.name === 'AbortError') {
+                    resultDiv.innerHTML = '<strong>Error:</strong> Request timed out. The server may be slow or unreachable.';
+                } else if (error.message === 'Not authenticated' || error.message?.includes('Session expired')) {
+                    resultDiv.innerHTML = '<strong>Error:</strong> Session expired. Please log in again.';
                     if (typeof showToast !== 'undefined') {
                         showToast('error', 'Authentication required. Please sign in again.');
                     }

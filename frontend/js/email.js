@@ -2,6 +2,24 @@
  * Email forwarding functionality
  */
 
+// Connection test timeout (ms) - prevents indefinite hanging
+const CONNECTION_TEST_TIMEOUT = 30000;
+
+// Fetch with timeout to prevent indefinite hanging
+async function fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CONNECTION_TEST_TIMEOUT);
+    try {
+        const response = await authenticatedFetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+        return response;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 // Extract error message from API response (FastAPI returns detail, we use error)
 function getEmailErrorMsg(data) {
     if (data?.error) return data.error;
@@ -21,8 +39,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     const emailCard = document.querySelector('.connection-card');
     const emailStatusEl = document.getElementById('emailStatus');
     if (emailCard && emailStatusEl && typeof authenticatedFetch !== 'undefined' && localStorage.getItem('auth_token')) {
+        let statusTimeoutId;
         try {
-            const statusRes = await authenticatedFetch(`${window.location.origin}/api/email/status`);
+            const controller = new AbortController();
+            statusTimeoutId = setTimeout(() => controller.abort(), 8000);
+            const statusRes = await authenticatedFetch(`${window.location.origin}/api/email/status`, {
+                signal: controller.signal
+            });
+            clearTimeout(statusTimeoutId);
             if (statusRes.ok) {
                 const status = await statusRes.json();
                 if (!status.configured && emailStatusEl) {
@@ -34,7 +58,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }
         } catch (e) {
-            // Ignore - user may not be logged in yet
+            if (statusTimeoutId) clearTimeout(statusTimeoutId);
+            // Ignore - user may not be logged in yet or request timed out
         }
     }
 
@@ -74,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             emailResults.style.display = 'none';
             
             try {
-                const response = await authenticatedFetch(`${window.location.origin}/api/email/test`, {
+                const response = await fetchWithTimeout(`${window.location.origin}/api/email/test`, {
                     method: 'POST'
                 });
                 
@@ -132,10 +157,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 emailStatus.style.display = 'block';
                 emailStatus.className = 'connection-status error';
                 
-                if (error.message === 'Not authenticated') {
-                    emailStatus.innerHTML = '<strong>Error:</strong> Not logged in. Please refresh and login again.';
+                if (error.name === 'AbortError') {
+                    emailStatus.innerHTML = '<strong>Error:</strong> Request timed out. The server may be slow or unreachable.';
+                } else if (error.message === 'Not authenticated' || error.message?.includes('Session expired')) {
+                    emailStatus.innerHTML = '<strong>Error:</strong> Session expired. Please log in again.';
                 } else {
-                    emailStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                    emailStatus.innerHTML = `<strong>Error:</strong> ${error.message || 'Connection failed'}`;
                 }
             } finally {
                 testEmailBtn.disabled = false;
@@ -161,7 +188,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             emailResults.style.display = 'none';
             
             try {
-                const response = await authenticatedFetch(`${window.location.origin}/api/email/check`, {
+                const response = await fetchWithTimeout(`${window.location.origin}/api/email/check`, {
                     method: 'POST'
                 });
                 
@@ -235,10 +262,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 emailStatus.style.display = 'block';
                 emailStatus.className = 'connection-status error';
                 
-                if (error.message === 'Not authenticated') {
-                    emailStatus.innerHTML = '<strong>Error:</strong> Not logged in. Please refresh and login again.';
+                if (error.name === 'AbortError') {
+                    emailStatus.innerHTML = '<strong>Error:</strong> Request timed out. The server may be slow or unreachable.';
+                } else if (error.message === 'Not authenticated' || error.message?.includes('Session expired')) {
+                    emailStatus.innerHTML = '<strong>Error:</strong> Session expired. Please log in again.';
                 } else {
-                    emailStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                    emailStatus.innerHTML = `<strong>Error:</strong> ${error.message || 'Connection failed'}`;
                 }
             } finally {
                 checkEmailBtn.disabled = false;
