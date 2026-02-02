@@ -1,6 +1,9 @@
 /* TravelSync - Aspen + TravelSafe inspired design
    Mobile-first, clean cards, dark blue + orange palette */
 
+/* Import Inter font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 /* Reset & Base */
 *,
 *::before,
@@ -59,13 +62,19 @@ html {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background: var(--color-bg);
     color: var(--color-text);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     min-height: 100vh;
+}
+
+/* Ensure Inter font is used everywhere */
+* {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 /* ========== Login Page (Same as Landing Page) ========== */
@@ -430,9 +439,9 @@ body {
     padding: calc(var(--space-lg) * 1.2);
 }
 
-/* Reduce padding for cards with collapsed sections */
+/* Reduce padding for cards with collapsed sections - made thicker */
 .card-airportr:has(.collapsible-header:not(.active)) {
-    padding: calc(var(--space-xs) * 1.2) calc(var(--space-lg) * 1.2);
+    padding: calc(var(--space-md) * 1.2) calc(var(--space-lg) * 1.2);
 }
 
 .card-header {
@@ -445,11 +454,14 @@ body {
 .card-header.collapsible-header {
     cursor: pointer;
     user-select: none;
-    padding: calc(var(--space-xs) * 1.2) calc(var(--space-md) * 1.2);
-    margin: calc(var(--space-xs) * -1.2) calc(var(--space-lg) * -1.2) 0 calc(var(--space-lg) * -1.2);
+    padding: calc(var(--space-md) * 1.2) calc(var(--space-md) * 1.2);
+    margin: calc(var(--space-md) * -1.2) calc(var(--space-lg) * -1.2) 0 calc(var(--space-lg) * -1.2);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     transition: background-color 0.2s;
-    min-height: auto;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .card-header.collapsible-header:hover {
@@ -468,11 +480,16 @@ body {
     font-weight: 600;
     color: #1E293B;
     margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .card-header.collapsible-header h2 {
-    font-size: 1rem;
-    font-weight: 500;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: #1E293B;
+    margin: 0;
+    line-height: 1.4;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .collapse-icon {
@@ -488,8 +505,9 @@ body {
 }
 
 .collapsible-content {
-    padding-top: calc(var(--space-md) * 1.2);
+    padding: calc(var(--space-md) * 1.2) 0;
     animation: slideDown 0.3s ease;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 @keyframes slideDown {
@@ -505,9 +523,10 @@ body {
 
 .card-description {
     color: #64748B;
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     line-height: 1.6;
-    margin-bottom: var(--space-md);
+    margin-bottom: var(--space-lg);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 /* Airportr Upload Area */
@@ -664,7 +683,9 @@ body {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-sm);
-    margin-top: var(--space-md);
+    margin-top: var(--space-lg);
+    margin-bottom: var(--space-sm);
+    align-items: center;
 }
 
 /* Status Messages */
@@ -1104,7 +1125,7 @@ main:not(.main-airportr) {
     }
     
     .card-airportr:has(.collapsible-header:not(.active)) {
-        padding: calc(var(--space-xs) * 1.2) calc(var(--space-xl) * 1.2);
+        padding: calc(var(--space-md) * 1.2) calc(var(--space-xl) * 1.2);
     }
 }
 
